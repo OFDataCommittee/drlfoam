@@ -1,0 +1,10 @@
+#!/usr/bin/bash
+
+# create test data for unittests
+test_case_path="openfoam/test_cases"
+test_data_path="test_data"
+env_name="rotatingCylinder2D"
+
+mkdir -p $test_data_path
+cp -r "${test_case_path}/${env_name}" "${test_data_path}/"
+cd "${test_data_path}/${env_name}" && ./Allrun.pre

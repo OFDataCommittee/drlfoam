@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+# set environment variables
+export DRL_BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+export DRL_TORCH=$DRL_BASE/libtorch

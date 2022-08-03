@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+if [ -z $DRL_TORCH ]; 
+then 
+    echo "Loading environment variables from setup-env"
+    source setup-env
+fi
+
+if [ ! -d "libtorch" ]; 
+then 
+    wget https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-1.12.0%2Bcpu.zip && \
+    unzip libtorch-cxx11-abi-shared-with-deps-1.12.0+cpu.zip
+    rm libtorch-cxx11-abi-shared-with-deps-1.12.0+cpu.zip
+fi
+
+wmake all openfoam/src

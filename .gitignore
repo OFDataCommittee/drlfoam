@@ -1,3 +1,11 @@
+# repository-specific
+libtorch
+lnInclude
+linux64GccDPInt32Opt
+.vscode
+test_data
+test_training
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
