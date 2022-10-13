@@ -1,2 +1,2 @@
 agentRotatingWallVelocityFvPatchVectorField.C
-LIB = $(FOAM_USER_LIBBIN)/libAgentRotatingWallVelocity
+LIB = $(DRL_LIBBIN)/libAgentRotatingWallVelocity

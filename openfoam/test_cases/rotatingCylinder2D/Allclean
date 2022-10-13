@@ -1,9 +1,9 @@
 #!/bin/bash
 cd "${0%/*}" || exit
-. ${WM_PROJECT_DIR:?}/bin/tools/CleanFunctions
+. ${DRL_BASE:?}/openfoam/RunFunctions
 #------------------------------------------------------------------------------
 
 cleanCase
-rm -rf 0 trajectory.csv finished.txt
+rm -rf 0 trajectory.csv
 
 #------------------------------------------------------------------------------

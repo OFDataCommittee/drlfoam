@@ -5,6 +5,9 @@ linux64GccDPInt32Opt
 .vscode
 test_data
 test_training
+openfoam/libs
+*.sif
+pydrl
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

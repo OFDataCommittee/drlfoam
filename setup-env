@@ -1,5 +1,33 @@
 #!/usr/bin/env bash
 
-# set environment variables
+# location of repository
 export DRL_BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-export DRL_TORCH=$DRL_BASE/libtorch
+# location of compiled libraries
+export DRL_LIBBIN="${DRL_BASE}/openfoam/libs"
+mkdir -p $DRL_LIBBIN
+
+if [[ $* == *--container* ]]
+then
+    # workflow with Singularity container
+    echo "Setting environment variables for execution with Singularity"
+    # image location
+    export DRL_IMAGE="${DRL_BASE}/of2206-py1.12.1-cpu.sif"
+    # location of OpenFOAM bashrc file inside the container
+    export DRL_BASHRC="/usr/lib/openfoam/openfoam2206/etc/bashrc"
+    # path to libTorch inside the container
+    export DRL_TORCH="/opt/libtorch"
+else
+    # workflow with local installation of dependencies
+    echo "Setting environment variables for execution without containers"
+    unset DRL_IMAGE DRL_BASHRC
+    # path to libTorch
+    export DRL_TORCH="${DRL_BASE}/libtorch"
+    # download libTorch if necessary
+    if [ ! -d $DRL_TORCH ];
+    then
+        echo "Could not find libTorch dependencies. Downloading libTorch to ${DRL_TORCH}"
+        wget https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-1.12.1%2Bcpu.zip && \
+        unzip libtorch-cxx11-abi-shared-with-deps-1.12.1+cpu.zip
+        rm libtorch-cxx11-abi-shared-with-deps-1.12.1+cpu.zip
+    fi
+fi

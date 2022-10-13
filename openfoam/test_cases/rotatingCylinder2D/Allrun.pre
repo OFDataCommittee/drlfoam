@@ -1,6 +1,6 @@
 #!/bin/bash
 cd "${0%/*}" || exit
-. ${WM_PROJECT_DIR:?}/bin/tools/RunFunctions
+. ${DRL_BASE:?}/openfoam/RunFunctions
 #------------------------------------------------------------------------------
 
 # create mesh

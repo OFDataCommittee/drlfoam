@@ -19,7 +19,7 @@
 
 ### Python environment
 
-A miss-match between the installed Python-frontend of PyTorch and the C++ frontend (libTorch) can lead to unexpected behavior. Therefore, it is recommended to create a virtual environment using [venv](https://docs.python.org/3/library/venv.html) or [conda](https://docs.conda.io/en/latest/miniconda.html). Moreover, the currently used PyTorch version (1.12.0) requires a Python interpreter **>=3.8**. The following listing shows all steps to set up a suitable virtual environment on Ubuntu 20.04 or newer.
+A miss-match between the installed Python-frontend of PyTorch and the C++ frontend (libTorch) can lead to unexpected behavior. Therefore, it is recommended to create a virtual environment using [venv](https://docs.python.org/3/library/venv.html) or [conda](https://docs.conda.io/en/latest/miniconda.html). Moreover, the currently used PyTorch version (1.12.1) requires a Python interpreter **>=3.8**. The following listing shows all steps to set up a suitable virtual environment on Ubuntu 20.04 or newer.
 ```
 # install venv
 sudo apt update && sudo apt install python3.8-venv
@@ -44,6 +44,22 @@ Source code and test cases are only compatible with **OpenFOAM-v2206**; [install
 source setup-env
 ./Allwmake
 ```
+In case you want to re-compile starting from a clean state, remove the library folder:
+```
+# assuming you are at the repository's top folder
+rm -r openfoam/libs/
+```
+
+### Working with Singularity containers
+
+Instead of installing dependencies manually, you can also employ the provided Singularity container. Singularity simplifies execution on HPC infrastructures, because no dependencies except for Singularity itself and OpenMPI are required. To build the container locally, run:
+```
+sudo singularity build of2206-py1.11.0-cpu.sif docker://andreweiner/of_pytorch:of2206-py1.11.0-cpu
+```
+By default, the container is expected to be located at the repository's top level. The default location may be changed by adjusting the `DRL_IMAGE` variable in *setup-env*. To build the OpenFOAM library components, provide the `--container` flag:
+```
+./Allwmake --container
+```
 
 ## Running a training
 
@@ -57,6 +73,11 @@ cd examples
 # training saved in test_training; buffer size 4; 2 runners
 # this training requires 4 MPI ranks on average and two loops
 # of each runner to fill the buffer
+python3 run_training.py -o test_training -b 4 -r 2
+```
+To run the training with the Singularity container, pass the `--container` flag to *setup-env*:
+```
+source setup-env --container
 python3 run_training.py -o test_training -b 4 -r 2
 ```
 

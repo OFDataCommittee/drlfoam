@@ -15,7 +15,7 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-libs ("libAgentRotatingWallVelocity.so");
+libs ("${DRL_LIBBIN}/libAgentRotatingWallVelocity.so");
 
 application     pimpleFoam;
 

@@ -1,10 +1,9 @@
 #!/bin/bash
 cd "${0%/*}" || exit
-. ${WM_PROJECT_DIR:?}/bin/tools/RunFunctions
+. ${DRL_BASE:?}/openfoam/RunFunctions
 #------------------------------------------------------------------------------
 
 # run case
 runParallel pimpleFoam
-touch finished.txt
 
 #------------------------------------------------------------------------------

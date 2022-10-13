@@ -1,16 +1,13 @@
 #!/usr/bin/env bash
 
-if [ -z $DRL_TORCH ]; 
-then 
-    echo "Loading environment variables from setup-env"
-    source setup-env
-fi
+cmd="wmake all openfoam/src"
 
-if [ ! -d "libtorch" ]; 
-then 
-    wget https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-1.12.0%2Bcpu.zip && \
-    unzip libtorch-cxx11-abi-shared-with-deps-1.12.0+cpu.zip
-    rm libtorch-cxx11-abi-shared-with-deps-1.12.0+cpu.zip
+if [[ $* == *--container* ]]
+then
+    # compile with container
+    source setup-env --container
+    singularity exec $DRL_IMAGE bash -c "source $DRL_BASHRC && $cmd"
+else
+    # compile without container
+    source setup-env && $cmd
 fi
-
-wmake all openfoam/src

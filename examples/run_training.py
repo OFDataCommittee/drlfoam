@@ -10,6 +10,7 @@ from os.path import join
 from os import makedirs
 import sys
 from os import environ
+from time import time
 BASE_PATH = environ.get("DRL_BASE", "")
 sys.path.insert(0, BASE_PATH)
 
@@ -72,7 +73,8 @@ def main(args):
         # Typical Slurm configs for TU Braunschweig cluster
         # TODO: complete Singularity workflow for cluster
         config = SlurmConfig(
-            modules=[]
+            n_tasks=2, n_nodes=1, partition="standard", time="00:30:00",
+            modules=["singularity/latest", "mpi/openmpi/4.1.1/gcc"]
         )
         buffer = SlurmBuffer(training_path, env,
                              buffer_size, n_runners, config)
@@ -91,6 +93,7 @@ def main(args):
                      env.action_bounds, env.action_bounds)
 
     # begin training
+    start_time = time()
     for e in range(episodes):
         print(f"Start of episode {e}")
         buffer.fill()
@@ -103,6 +106,7 @@ def main(args):
         buffer.update_policy(current_policy)
         current_policy.save(join(training_path, f"policy_trace_{e}.pt"))
         buffer.reset()
+    print(f"Training time (s): {time() - start_time}")
 
     # save training statistics
     with open(join(training_path, "training_history.pkl"), "wb") as f:
