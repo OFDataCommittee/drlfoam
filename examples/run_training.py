@@ -71,7 +71,6 @@ def main(args):
         buffer = LocalBuffer(training_path, env, buffer_size, n_runners)
     elif executer == "slurm":
         # Typical Slurm configs for TU Braunschweig cluster
-        # TODO: complete Singularity workflow for cluster
         config = SlurmConfig(
             n_tasks=2, n_nodes=1, partition="standard", time="00:30:00",
             modules=["singularity/latest", "mpi/openmpi/4.1.1/gcc"]

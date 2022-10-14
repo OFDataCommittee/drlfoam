@@ -12,4 +12,4 @@ else
     source setup-env && $cmd
 fi
 
-rm ${DRL_LIBBIN}/*
+rm -vf ${DRL_LIBBIN}/*

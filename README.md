@@ -44,21 +44,25 @@ Source code and test cases are only compatible with **OpenFOAM-v2206**; [install
 source setup-env
 ./Allwmake
 ```
-In case you want to re-compile starting from a clean state, remove the library folder:
+In case you want to re-compile starting from a clean state:
 ```
 # assuming you are at the repository's top folder
-rm -r openfoam/libs/
+./Allwclean
 ```
 
 ### Working with Singularity containers
 
 Instead of installing dependencies manually, you can also employ the provided Singularity container. Singularity simplifies execution on HPC infrastructures, because no dependencies except for Singularity itself and OpenMPI are required. To build the container locally, run:
 ```
-sudo singularity build of2206-py1.11.0-cpu.sif docker://andreweiner/of_pytorch:of2206-py1.11.0-cpu
+sudo singularity build of2206-py1.12.1-cpu.sif docker://andreweiner/of_pytorch:of2206-py1.12.1-cpu
 ```
 By default, the container is expected to be located at the repository's top level. The default location may be changed by adjusting the `DRL_IMAGE` variable in *setup-env*. To build the OpenFOAM library components, provide the `--container` flag:
 ```
 ./Allwmake --container
+```
+Similarly, for cleaning up the build:
+```
+./Allwclean --container
 ```
 
 ## Running a training
@@ -80,6 +84,61 @@ To run the training with the Singularity container, pass the `--container` flag 
 source setup-env --container
 python3 run_training.py -o test_training -b 4 -r 2
 ```
+
+## Running a training with SLURM
+
+This sections describes how to run a training on a HPC with SLURM. The workflow was tested on TU Braunschweig's [Pheonix cluster](https://www.tu-braunschweig.de/en/it/dienste/21/phoenix) and might need small adjustments for other HPC configurations. The cluster should provide the following modules/packages:
+- Singularity
+- Python 3.8
+- OpenMPI v4.1 (minor difference might be OK)
+- SLURM
+
+After logging in, the following steps set up all dependencies. These steps have to be executed only once in a new environment:
+```
+# load git and clone repository
+module load comp/git/latest
+git clone https://github.com/OFDataCommittee/drlfoam.git
+# copy the Singularity image to the drlfoam folder
+cp /path/to/of2206-py1.12.1-cpu.sif drlfoam/
+# set up the virtual Python environment
+module load python/3.8.2 
+pip install --upgrade pip
+pip install -r requirements.txt
+# compile the OpenFOAM library components
+module load singularity/latest
+./Allwmake --container
+```
+The *examples/run_training.py* scripts support SLURM-based execution via the `-e slurm` option. To run a new training on the cluster, navigate to the *examples* folder and create a new dedicated jobscript, e.g., *training_jobscript*. A suitable jobscript looks as follows:
+```
+#SBATCH --partition=standard
+#SBATCH --nodes=1
+#SBATCH --time=7-00:00:00
+#SBATCH --job-name=drl_train
+#SBATCH --ntasks-per-node=1
+
+module load python/3.8.2
+
+# adjust path if necessary
+source ~/drlfoam/pydrl/bin/activate
+source ~/drlfoam/setup-env --container
+
+# start a training with a buffer size of 8 and 8 runners;
+# save output to log.test_training
+python3 run_training.py -o test_training -e slurm -b 8 -r 8 &> log.test_training
+```
+Submitting, inspecting, and canceling of trainings works as follows:
+```
+# start the training
+sbatch training_jobscript
+# check the SLURM queue
+squeue -u $USER
+# canceling a job
+scancel job_id
+```
+To detect potential errors in case of failure, inspect *all* log files:
+- the log file of the driver script, e.g., *log.test_training*
+- the output of individual simulation jobs, e.g., slurm-######.out
+- the standard OpenFOAM log files located in *test_training/copy_#*
 
 ## Development
 
