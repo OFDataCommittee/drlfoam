@@ -1,3 +1,15 @@
 #!/usr/bin/env bash
 
-wclean all openfoam/src
+cmd="wclean all openfoam/src"
+
+if [[ $* == *--container* ]]
+then
+    # compile with container
+    source setup-env --container
+    singularity exec $DRL_IMAGE bash -c "source $DRL_BASHRC && $cmd"
+else
+    # compile without container
+    source setup-env && $cmd
+fi
+
+rm ${DRL_LIBBIN}/*
