@@ -101,7 +101,9 @@ git clone https://github.com/OFDataCommittee/drlfoam.git
 # copy the Singularity image to the drlfoam folder
 cp /path/to/of2206-py1.12.1-cpu.sif drlfoam/
 # set up the virtual Python environment
-module load python/3.8.2 
+module load python/3.8.2
+python3 -m venv pydrl
+source pydrl/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 # compile the OpenFOAM library components
