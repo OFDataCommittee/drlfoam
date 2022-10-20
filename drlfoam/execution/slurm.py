@@ -40,26 +40,44 @@ def get_job_status(job_id: int) -> str:
     return response[12]
 
 
-def submit_and_wait(jobscript: str, wait: int = 5):
+def submit_and_wait(jobscript: str, wait: int = 5, timeout: int = 1e15):
     job_id = submit_job(jobscript)
-    running = True
+    running, time_passed = True, 0
     while running:
         try:
             status = get_job_status(job_id)
             if status in ["PD", "R", "CF"]:
                 sleep(wait)
+                time_passed += wait
+                if time_passed > timeout:
+                    Popen(["scancel", f"{job_id}"]).wait()
+                    raise Exception(
+                        f"Slurm job {job_id} exceeded time limited of {timeout}s and got canceled")
             else:
                 running = False
-        except:
+        except Exception as e:
+            print(e)
             running = False
 
 
 class SlurmConfig(object):
-    def __init__(self, commands: List[str] = [], modules: List[str] = [],
-                 job_name: str = None, n_tasks: int = None, n_nodes: int = None,
-                 std_out: str = None, err_out: str = None, partition: str = None,
-                 constraint: str = None, mail_type: str = None, mail_user: str = None,
-                 time: str = None, n_tasks_per_node: int = None, mem_per_cpu: int = None):
+    def __init__(
+        self,
+        commands: List[str] = [],
+        modules: List[str] = [],
+        job_name: str = None,
+        n_tasks: int = None,
+        n_nodes: int = None,
+        std_out: str = None,
+        err_out: str = None,
+        partition: str = None,
+        constraint: str = None,
+        mail_type: str = None,
+        mail_user: str = None,
+        time: str = None,
+        n_tasks_per_node: int = None,
+        mem_per_cpu: int = None,
+    ):
 
         self._commands = commands
         self._modules = modules
@@ -75,16 +93,14 @@ class SlurmConfig(object):
             SLURM_MAIL_USER: mail_user,
             SLURM_TIME: time,
             SLURM_NTASKS_PER_NODE: n_tasks_per_node,
-            SLURM_MEM_PER_CPU: mem_per_cpu
+            SLURM_MEM_PER_CPU: mem_per_cpu,
         }
 
     def write(self, path: str):
         entries = [DEFAULT_SHELL, ""]
         for key, val in self._options.items():
             if val is not None:
-                entries.append(
-                    f"{SLURM_PREFIX} {key}={val}"
-                )
+                entries.append(f"{SLURM_PREFIX} {key}={val}")
 
         if len(self._modules) > 0:
             entries.append("")
@@ -214,42 +230,48 @@ class SlurmConfig(object):
 
 
 class SlurmBuffer(Buffer):
-    def __init__(self, path: str, base_env: Environment, buffer_size: int,
-                 n_runners_max: int, slurm_config: SlurmConfig,
-                 keep_trajectories: bool = True):
+    def __init__(
+        self,
+        path: str,
+        base_env: Environment,
+        buffer_size: int,
+        n_runners_max: int,
+        slurm_config: SlurmConfig,
+        keep_trajectories: bool = True,
+        timeout: int = 1e15,
+        wait: int = 5
+    ):
         super(SlurmBuffer, self).__init__(
-            path, base_env, buffer_size, n_runners_max, keep_trajectories
+            path, base_env, buffer_size, n_runners_max, keep_trajectories, timeout
         )
         self._config = slurm_config
+        self._wait = wait
 
     def prepare(self):
         self._config.commands = [
             f"cd {self._base_env.path}",
-            f"./{self._base_env.initializer_script}"
+            f"./{self._base_env.initializer_script}",
         ]
         self._config.job_name = "prepare"
         self._config.err_out = join(self._base_env.path, "prepare.err")
         self._config.err_out = join(self._base_env.path, "prepare.out")
         jobscript = join(self._base_env.path, "jobscript.sh")
         self._config.write(jobscript)
-        self._manager.add(submit_and_wait, jobscript)
+        self._manager.add(submit_and_wait, jobscript,
+                          wait=self._wait, timeout=self._timeout)
         self._manager.run()
         self._base_env.initialized = True
 
     def fill(self):
         for i, env in enumerate(self.envs):
-            self._config.commands = [
-                f"cd {env.path}",
-                f"./{env.run_script}"
-            ]
+            self._config.commands = [f"cd {env.path}", f"./{env.run_script}"]
             self._config.job_name = f"copy_{i}"
             self._config.err_out = join(env.path, f"copy_{i}.err")
             self._config.err_out = join(env.path, f"copy_{i}.out")
             jobscript = join(env.path, "jobscript.sh")
             self._config.write(jobscript)
-            self._manager.add(
-                submit_and_wait, jobscript
-            )
+            self._manager.add(submit_and_wait, jobscript,
+                              wait=self._wait, timeout=self._timeout)
         self._manager.run()
         if self._keep_trajectories:
             self.save_trajectories()

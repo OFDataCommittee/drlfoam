@@ -3,7 +3,7 @@ from os import makedirs, remove
 from os.path import join, isdir, isfile
 from shutil import copytree, rmtree
 from copy import deepcopy
-from pytest import fixture
+from pytest import fixture, raises
 import torch as pt
 from ..local import LocalBuffer
 from ...environment import RotatingCylinder2D
@@ -67,3 +67,10 @@ class TestLocalBuffer():
         assert buffer._n_fills == 1
         buffer.clean()
         assert not isfile(join(path, "copy_0", "log.blockMesh"))
+
+    def test_timeout(self, temp_training):
+        path, base_env = temp_training
+        base_env.start_time = 0.0
+        base_env.end_time = 0.015
+        buffer = LocalBuffer(path, base_env, 2, 2, timeout=1)
+        assert not isfile(join(path, base_env.path, "log.pimpleFoam.pre"))

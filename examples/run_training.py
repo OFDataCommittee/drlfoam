@@ -44,6 +44,8 @@ def parseArguments():
                     help="Reply buffer size.")
     ag.add_argument("-f", "--finish", required=False, default=8.0, type=float,
                     help="End time of the simulations.")
+    ag.add_argument("-t", "--timeout", required=False, default=1e15, type=int,
+                    help="Maximum allowed runtime of a single simulation in seconds.")
     args = ag.parse_args()
     return args
 
@@ -56,6 +58,7 @@ def main(args):
     n_runners = args.runners
     end_time = args.finish
     executer = args.environment
+    timeout = args.timeout
 
     # create a directory for training
     makedirs(training_path, exist_ok=True)
@@ -68,7 +71,7 @@ def main(args):
 
     # create buffer
     if executer == "local":
-        buffer = LocalBuffer(training_path, env, buffer_size, n_runners)
+        buffer = LocalBuffer(training_path, env, buffer_size, n_runners, timeout=timeout)
     elif executer == "slurm":
         # Typical Slurm configs for TU Braunschweig cluster
         config = SlurmConfig(
@@ -76,7 +79,7 @@ def main(args):
             modules=["singularity/latest", "mpi/openmpi/4.1.1/gcc"]
         )
         buffer = SlurmBuffer(training_path, env,
-                             buffer_size, n_runners, config)
+                             buffer_size, n_runners, config, timeout=timeout)
     else:
         raise ValueError(
             f"Unknown executer {executer}; available options are 'local' and 'slurm'.")

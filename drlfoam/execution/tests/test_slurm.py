@@ -150,3 +150,12 @@ class TestSlurmBuffer():
         assert buffer._n_fills == 1
         buffer.clean()
         assert not isfile(join(path, "copy_0", "log.blockMesh"))
+
+    def test_timeout(self, temp_training):
+        path, base_env = temp_training
+        base_env.start_time = 0.0
+        base_env.end_time = 0.015
+        config = SlurmConfig(n_tasks=2, mem_per_cpu=2)
+        buffer = SlurmBuffer(path, base_env, 2, 2, config, timeout=1, wait=1)
+        buffer.prepare()
+        assert not isfile(join(path, base_env.path, "log.pimpleFoam.pre"))

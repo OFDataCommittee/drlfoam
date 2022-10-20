@@ -4,8 +4,8 @@ from queue import Queue
 
 
 def string_args(args: list, kwargs: dict):
-    args_str = ", ".join(args)
-    kwargs_str = ", ".join(f"{key}={value}" for key, value in kwargs.items())
+    args_str = ", ".join([str(arg) for arg in args])
+    kwargs_str = ", ".join(f"{key}={str(value)}" for key, value in kwargs.items())
     if args_str and kwargs_str:
         return args_str + ", " + kwargs_str
     elif args_str and not kwargs_str:

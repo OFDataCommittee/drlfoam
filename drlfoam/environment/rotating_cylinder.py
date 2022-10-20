@@ -159,26 +159,30 @@ class RotatingCylinder2D(Environment):
 
     @property
     def observations(self) -> dict:
-        times_folder_forces = glob(
-            join(self.path, "postProcessing", "forces", "*"))
-        force_path = join(times_folder_forces[0], "coefficient.dat")
-        forces = _parse_forces(force_path)
-        tr_path = join(self.path, "trajectory.csv")
-        tr = _parse_trajectory(tr_path)
-        times_folder_probes = glob(
-            join(self.path, "postProcessing", "probes", "*"))
-        probes_path = join(times_folder_probes[0], "p")
-        probes = _parse_probes(probes_path, self._n_states)
         obs = {}
-        p_names = ["p{:d}".format(i) for i in range(self._n_states)]
-        obs["states"] = pt.from_numpy(probes[p_names].values)
-        obs["actions"] = pt.from_numpy(tr["omega"].values)
-        obs["cd"] = pt.from_numpy(forces["cd"].values)
-        obs["cl"] = pt.from_numpy(forces["cl"].values)
-        obs["rewards"] = self._reward(obs["cd"], obs["cl"])
-        obs["alpha"] = pt.from_numpy(tr["alpha"].values)
-        obs["beta"] = pt.from_numpy(tr["beta"].values)
-        return obs
+        try:
+            times_folder_forces = glob(
+                join(self.path, "postProcessing", "forces", "*"))
+            force_path = join(times_folder_forces[0], "coefficient.dat")
+            forces = _parse_forces(force_path)
+            tr_path = join(self.path, "trajectory.csv")
+            tr = _parse_trajectory(tr_path)
+            times_folder_probes = glob(
+                join(self.path, "postProcessing", "probes", "*"))
+            probes_path = join(times_folder_probes[0], "p")
+            probes = _parse_probes(probes_path, self._n_states)
+            p_names = ["p{:d}".format(i) for i in range(self._n_states)]
+            obs["states"] = pt.from_numpy(probes[p_names].values)
+            obs["actions"] = pt.from_numpy(tr["omega"].values)
+            obs["cd"] = pt.from_numpy(forces["cd"].values)
+            obs["cl"] = pt.from_numpy(forces["cl"].values)
+            obs["rewards"] = self._reward(obs["cd"], obs["cl"])
+            obs["alpha"] = pt.from_numpy(tr["alpha"].values)
+            obs["beta"] = pt.from_numpy(tr["beta"].values)
+        except Exception as e:
+            print("Could not parse observations: ", e)
+        finally:
+            return obs
 
     def reset(self):
         files = ["log.pimpleFoam", "finished.txt", "trajectory.csv"]

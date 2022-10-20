@@ -149,6 +149,7 @@ Unittests are implemented with [PyTest](https://docs.pytest.org/en/7.1.x/). Some
 # examples for running all or selected tests
 # starting from the repository top-level
 # run all available tests with additional output (-s)
+source setup-env
 pytest -s drlfoam
 # run all tests in the agent sub-package
 pytest -s drlfoam/agent

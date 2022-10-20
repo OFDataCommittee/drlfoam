@@ -1,4 +1,3 @@
-
 from os.path import join
 from abc import ABC, abstractmethod
 from subprocess import Popen
@@ -13,13 +12,21 @@ from ..environment import Environment
 
 
 class Buffer(ABC):
-    def __init__(self, path: str, base_env: Environment, buffer_size: int,
-                 n_runners_max: int, keep_trajectories: bool):
+    def __init__(
+        self,
+        path: str,
+        base_env: Environment,
+        buffer_size: int,
+        n_runners_max: int,
+        keep_trajectories: bool,
+        timeout: int,
+    ):
         self._path = path
         self._base_env = base_env
         self._buffer_size = buffer_size
         self._n_runners_max = n_runners_max
         self._keep_trajectories = keep_trajectories
+        self._timeout = timeout
         self._manager = TaskManager(self._n_runners_max)
         self._envs = None
         self._n_fills = 0
@@ -77,7 +84,10 @@ class Buffer(ABC):
         states, actions, rewards = [], [], []
         for env in self.envs:
             obs = env.observations
-            states.append(obs["states"])
-            actions.append(obs["actions"])
-            rewards.append(obs["rewards"])
+            if all([key in obs for key in ("states", "actions", "rewards")]):
+                states.append(obs["states"])
+                actions.append(obs["actions"])
+                rewards.append(obs["rewards"])
+            else:
+                print(f"Warning: environment {env.path} returned empty observations")
         return states, actions, rewards
