@@ -276,7 +276,7 @@ runParallel()
         if imageFound
         then
             echo "Running $appRun ($nProcs processes) on $PWD with image $DRL_IMAGE"
-            if [[ -z "${OMPI_BIND_TO_NONE}" ]]
+            if [[ -n "${OMPI_BIND_TO_NONE}" ]]
             then
                 runArgs="-n $nProcs --bind-to none"
             else
