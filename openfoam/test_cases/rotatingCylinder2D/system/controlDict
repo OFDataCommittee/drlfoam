@@ -51,10 +51,10 @@ functions
     {
         type            forceCoeffs;
         libs            (forces);
-        executeControl  timeStep;
-        executeInterval 20;
-        writeControl    timeStep;
-        writeInterval   20;
+        executeControl  runTime;
+        executeInterval 0.01;
+        writeControl    runTime;
+        writeInterval   0.01;
         timeStart       4.0;
         log false;
         patches
@@ -81,10 +81,10 @@ functions
         name            probes;
 
         // Write at same frequency as fields
-        executeControl  timeStep;
-        executeInterval 20;
-        writeControl    timeStep;
-        writeInterval   20;
+        executeControl  runTime;
+        executeInterval 0.01;
+        writeControl    runTime;
+        writeInterval   0.01;
         timeStart       4.0;
 
         // Fields to be probed

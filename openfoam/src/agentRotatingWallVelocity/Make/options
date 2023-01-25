@@ -3,6 +3,7 @@ EXE_INC = \
     -Wno-deprecated-declarations -Wno-old-style-cast -Wno-redundant-move \
     -I$(LIB_SRC)/finiteVolume/lnInclude \
     -I$(LIB_SRC)/sampling/lnInclude \
+    -I$(LIB_SRC)/OpenFOAM/lnInclude \
     -I$(DRL_TORCH)/include \
     -I$(DRL_TORCH)/include/torch/csrc/api/include
 

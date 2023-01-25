@@ -47,8 +47,6 @@ Usage
         origin          (0 0 0);
         axis            (0 0 1);
         policy          "policy.pt"
-        startTime       0.01;
-        interval        30;
         seed            0;
         train           true;
         absOmegaMax     0.05;
@@ -73,6 +71,7 @@ SourceFiles
 #include <random>
 #include "fixedValueFvPatchFields.H"
 #include "probes.H"
+#include "timeControl.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -97,15 +96,6 @@ class agentRotatingWallVelocityFvPatchVectorField
 
         //- training or evaluation mode
         bool train_;
-
-        //- number of iterations between updates
-        int interval_;
-
-        //- when to start controlling
-        scalar start_time_;
-
-        //- time iteration at which start time was reached
-        int start_iter_;
 
         //- name of the PyTorch angular velocity model
         word policy_name_;
@@ -137,9 +127,17 @@ class agentRotatingWallVelocityFvPatchVectorField
         //- update of next angular velocity value if true
         bool update_omega_;
 
+        //- when to start controlling
+        scalar start_time_;
+
+        //- time increment between control actions
+        scalar dt_control_;
+
         //- probes function object
         Foam::probes probes_;
-        
+
+        //- timeControls consistent with function objects
+        Foam::timeControl control_;
 
 public:
 
@@ -221,8 +219,15 @@ public:
         //- Save trajectory to file
         void saveTrajectory(scalar alpha, scalar beta) const;
 
+        //- Get probes function object dictionary
+        const Foam::dictionary& getProbesDict();
+
         //- initialize probes function object
         Foam::probes initializeProbes();
+
+        //- initialize control
+        Foam::timeControl initializeControl();
+
 };
 
 
