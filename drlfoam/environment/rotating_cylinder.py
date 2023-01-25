@@ -39,13 +39,14 @@ def _parse_trajectory(path: str) -> DataFrame:
 
 
 class RotatingCylinder2D(Environment):
-    def __init__(self, r1: float = 3.0, r2: float = 0.1):
+    def __init__(self, r1: float = 3.0, r2: float = 1.0, r3: float=0.1):
         super(RotatingCylinder2D, self).__init__(
             join(TESTCASE_PATH, "rotatingCylinder2D"), "Allrun.pre",
             "Allrun", "Allclean", 2, 12, 1
         )
         self._r1 = r1
         self._r2 = r2
+        self._r3 = r3
         self._initialized = False
         self._start_time = 0
         self._end_time = 4
@@ -56,7 +57,7 @@ class RotatingCylinder2D(Environment):
         self._policy = "policy.pt"
 
     def _reward(self, cd: pt.Tensor, cl: pt.Tensor) -> pt.Tensor:
-        return self._r1 - (cd + self._r2 * cl.abs())
+        return self._r1 - (self._r2 * cd + self._r3 * cl.abs())
 
     @property
     def start_time(self) -> float:
