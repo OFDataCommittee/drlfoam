@@ -31,10 +31,11 @@ def get_latest_time(path: str) -> str:
 
 def fetch_line_from_file(path: str, keyword: str) -> str:
     with open(path) as f:
+        lines = []
         for line in f.readlines():
             if keyword in line:
-                return line
-        return None
+                lines.append(line)
+        return lines if len(lines) > 1 else lines[0]
 
 
 def replace_line_in_file(path: str, keyword: str, new: str):

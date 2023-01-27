@@ -50,11 +50,9 @@ class TestLocalBuffer():
         base_env.end_time = 0.015
         buffer = LocalBuffer(path, base_env, 2, 2)
         buffer.prepare()
-        base_env.end_time = 0.03
         assert isfile(join(path, base_env.path, "log.blockMesh"))
         assert isfile(join(path, base_env.path, "trajectory.csv"))
         assert isdir(join(path, base_env.path, "postProcessing"))
-        envs = buffer.envs
         buffer.reset()
         assert not isfile(join(path, "copy_0", "trajectory.csv"))
         assert not isdir(join(path, "copy_0", "postProcessing"))

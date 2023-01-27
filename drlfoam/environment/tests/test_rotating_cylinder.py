@@ -49,16 +49,11 @@ class TestRotatingCylinder2D(object):
         env.initialized = True
         env.path = temp_case
         env.start_time = 2.0
-        line = fetch_line_from_file(
+        lines = fetch_line_from_file(
             join(env.path, "system", "controlDict"),
             "timeStart"
         )
-        assert "2.0" in line
-        line = fetch_line_from_file(
-            join(env.path, "processor0", "4", "U"),
-            "startTime"
-        )
-        assert "2.0" in line
+        assert all(["2.0" in line for line in lines])
 
     def test_end_time(self, temp_case):
         env = RotatingCylinder2D()
@@ -67,7 +62,7 @@ class TestRotatingCylinder2D(object):
         env.end_time = 8.0
         line = fetch_line_from_file(
             join(env.path, "system", "controlDict"),
-            "endTime"
+            "endTime "
         )
         assert "8.0" in line
 
@@ -75,22 +70,17 @@ class TestRotatingCylinder2D(object):
         env = RotatingCylinder2D()
         env.initialized = True
         env.path = temp_case
-        env.control_interval = 40
-        line = fetch_line_from_file(
+        env.control_interval = 0.001
+        lines = fetch_line_from_file(
             join(env.path, "system", "controlDict"),
             "executeInterval"
         )
-        assert "40" in line
-        line = fetch_line_from_file(
+        assert all(["0.001" in line for line in lines])
+        lines = fetch_line_from_file(
             join(env.path, "system", "controlDict"),
             "writeInterval"
         )
-        assert "40" in line
-        line = fetch_line_from_file(
-            join(env.path, "processor0", "4", "U"),
-            "interval"
-        )
-        assert "40" in line
+        assert all(["0.001" in line for line in lines])
 
     def test_action_bounds(self, temp_case):
         env = RotatingCylinder2D()
