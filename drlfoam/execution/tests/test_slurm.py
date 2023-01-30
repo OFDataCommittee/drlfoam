@@ -107,19 +107,24 @@ class TestSlurmConfig():
             "singularity/3.6.0rc2",
             "mpi/openmpi/4.1.1/gcc"
         ]
+        commands_pre = [
+            "source environment.sh",
+            "source OpenFOAM commands"
+        ]
         commands = [
             "cd where/to/run",
             "./Allrun"
         ]
         config = SlurmConfig(job_name="testjob")
         config.modules = modules
+        config.commands_pre = commands_pre
         config.commands = commands
         path = join("/tmp", "testjob.sh")
         config.write(path)
         assert isfile(path)
         with open(path, "r") as job:
             content = job.read()
-            for c in commands:
+            for c in commands_pre + commands:
                 assert c in content
         remove(path)
 

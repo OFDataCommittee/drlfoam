@@ -63,6 +63,7 @@ def submit_and_wait(jobscript: str, wait: int = 5, timeout: int = 1e15):
 class SlurmConfig(object):
     def __init__(
         self,
+        commands_pre: List[str] = [],
         commands: List[str] = [],
         modules: List[str] = [],
         job_name: str = None,
@@ -79,6 +80,7 @@ class SlurmConfig(object):
         mem_per_cpu: int = None,
     ):
 
+        self._commands_pre = commands_pre
         self._commands = commands
         self._modules = modules
         self._options = {
@@ -107,14 +109,23 @@ class SlurmConfig(object):
             for m in self._modules:
                 entries.append(f"module load {m}")
 
-        if len(self._commands) > 0:
+        all_commands = self._commands_pre + self._commands
+        if len(all_commands) > 0:
             entries.append("")
-            entries += self._commands
+            entries += all_commands
         else:
             print(f"Warning: no commands specified in jobscript {path}")
 
         with open(path, "w+") as jobscript:
             jobscript.write("\n".join(entries))
+
+    @property
+    def commands_pre(self) -> List[str]:
+        return self._commands_pre
+
+    @commands_pre.setter
+    def commands_pre(self, value: List[str]):
+        self._commands_pre = value
 
     @property
     def commands(self) -> List[str]:
