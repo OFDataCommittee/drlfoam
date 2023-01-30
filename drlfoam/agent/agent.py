@@ -107,11 +107,11 @@ class Agent(ABC):
         pass
 
     @abstractmethod
-    def save(self):
+    def save_state(self):
         pass
 
     @abstractmethod
-    def load(self):
+    def load_state(self):
         pass
 
     @abstractmethod
@@ -120,4 +120,8 @@ class Agent(ABC):
 
     @abstractproperty
     def history(self):
+        pass
+
+    @abstractproperty
+    def state(self):
         pass

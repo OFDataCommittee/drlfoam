@@ -1,5 +1,5 @@
 
-from typing import List
+from typing import List, Union
 from collections import defaultdict
 import pickle
 import torch as pt
@@ -14,6 +14,9 @@ DEFAULT_FC_DICT = {
     "n_neurons": 64,
     "activation": pt.nn.functional.relu
 }
+
+PPO_STATE_KEYS = ("policy_state", "value_state", "policy_optimizer_state",
+                  "value_optimizer_state", "history")
 
 
 class PPOAgent(Agent):
@@ -65,6 +68,7 @@ class PPOAgent(Agent):
 
         # history
         self._history = defaultdict(list)
+        self._update_counter = 0
 
     def update(self, states: List[pt.Tensor], actions: List[pt.Tensor],
                rewards: List[pt.Tensor]):
@@ -140,18 +144,30 @@ class PPOAgent(Agent):
         self._history["policy_div"].append(kl_)
         self._history["value_loss"].append(v_loss_)
         self._history["value_mse"].append(mse_)
+        self._history["episode"].append(self._update_counter)
+        self._update_counter += 1
 
-    def save(self, policy_path: str, value_path: str):
-        with open(policy_path, "wb") as pf:
-            pickle.dump(self._policy, pf, protocol=pickle.HIGHEST_PROTOCOL)
-        with open(value_path, "wb") as vf:
-            pickle.dump(self._value, vf, protocol=pickle.HIGHEST_PROTOCOL)
+    def save_state(self, path: str):
+        pt.save(self.state, path)
 
-    def load(self, policy_path: str, value_path: str):
-        with open(policy_path, "rb") as pf:
-            self._policy = pickle.load(pf)
-        with open(value_path, "rb") as vf:
-            self._value = pickle.load(vf)
+    def load_state(self, state: Union[str, dict]):
+        if isinstance(state, str):
+            state = pt.load(state)
+        if not isinstance(state, dict):
+            raise ValueError("Unkown state format; state should be a state dictionary or the path to a state dictionary.")
+        if not all([key in state.keys() for key in PPO_STATE_KEYS]):
+            ValueError(
+                "One or more keys missing in state dictionary;\n" +
+                "provided keys: {:s}\n".format(", ".join(state.keys())) + 
+                "expected keys: {:s}".format(", ".join(PPO_STATE_KEYS))
+            )
+        self._policy.load_state_dict(state["policy_state"])
+        self._value.load_state_dict(state["value_state"])
+        self._policy_optimizer.load_state_dict(state["policy_optimizer_state"])
+        self._value_optimizer.load_state_dict(state["value_optimizer_state"])
+        self._history = state["history"]
+        if self._history["episode"]:
+            self._update_counter = self._history["episode"][-1]
 
     def trace_policy(self):
         return pt.jit.script(self._policy)
@@ -159,3 +175,13 @@ class PPOAgent(Agent):
     @property
     def history(self) -> dict:
         return self._history
+
+    @property
+    def state(self) -> dict:
+        return {
+            "policy_state" : self._policy.state_dict(),
+            "value_state" : self._value.state_dict(),
+            "policy_optimizer_state" : self._policy_optimizer.state_dict(),
+            "value_optimizer_state" : self._value_optimizer.state_dict(),
+            "history" : self._history
+        }

@@ -61,7 +61,7 @@ class TestLocalBuffer():
         assert isfile(join(path, "copy_0", "log.pimpleFoam"))
         assert isdir(join(path, "copy_0", "postProcessing"))
         # implicit test of save_trajectory()
-        assert isfile(join(path, "observations_0.pkl"))
+        assert isfile(join(path, "observations_0.pt"))
         assert buffer._n_fills == 1
         buffer.clean()
         assert not isfile(join(path, "copy_0", "log.blockMesh"))

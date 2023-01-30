@@ -63,11 +63,10 @@ class Buffer(ABC):
             proc.wait()
 
     def save_trajectories(self):
-        obs = []
-        for env in self.envs:
-            obs.append(env.observations)
-        with open(join(self._path, f"observations_{self._n_fills}.pkl"), "wb") as f:
-            pickle.dump(obs, f, protocol=pickle.HIGHEST_PROTOCOL)
+        pt.save(
+            [env.observations for env in self.envs],
+            join(self._path, f"observations_{self._n_fills}.pt")
+        )
 
     @property
     def base_env(self) -> Environment:

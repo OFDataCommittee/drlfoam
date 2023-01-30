@@ -46,6 +46,8 @@ def parseArguments():
                     help="End time of the simulations.")
     ag.add_argument("-t", "--timeout", required=False, default=1e15, type=int,
                     help="Maximum allowed runtime of a single simulation in seconds.")
+    ag.add_argument("-c", "--checkpoint", required=False, default="", type=str,
+                    help="Load training state from checkpoint file.")
     args = ag.parse_args()
     return args
 
@@ -59,6 +61,7 @@ def main(args):
     end_time = args.finish
     executer = args.environment
     timeout = args.timeout
+    checkpoint_file = args.checkpoint
 
     # create a directory for training
     makedirs(training_path, exist_ok=True)
@@ -84,35 +87,38 @@ def main(args):
         raise ValueError(
             f"Unknown executer {executer}; available options are 'local' and 'slurm'.")
 
-    # execute Allrun.pre script and set new end_time
-    buffer.prepare()
-    buffer.base_env.start_time = buffer.base_env.end_time
-    buffer.base_env.end_time = end_time
-    buffer.reset()
-
     # create PPO agent
     agent = PPOAgent(env.n_states, env.n_actions, -
                      env.action_bounds, env.action_bounds)
 
+    # load checkpoint if provided
+    if checkpoint_file:
+        print(f"Loading checkpoint from file {checkpoint_file}")
+        agent.load_state(join(training_path, checkpoint_file))
+        starting_episode = agent.history["episode"][-1] + 1
+        buffer._n_fills = starting_episode
+    else:
+        starting_episode = 0
+        buffer.prepare()
+
+    buffer.base_env.start_time = buffer.base_env.end_time
+    buffer.base_env.end_time = end_time
+    buffer.reset()
+
     # begin training
     start_time = time()
-    for e in range(episodes):
+    for e in range(starting_episode, episodes):
         print(f"Start of episode {e}")
         buffer.fill()
         states, actions, rewards = buffer.observations
         print_statistics(actions, rewards)
         agent.update(states, actions, rewards)
-        agent.save(join(training_path, f"policy_{e}.pkl"),
-                   join(training_path, f"value_{e}.pkl"))
+        agent.save_state(join(training_path, f"checkpoint.pt"))
         current_policy = agent.trace_policy()
         buffer.update_policy(current_policy)
         current_policy.save(join(training_path, f"policy_trace_{e}.pt"))
         buffer.reset()
     print(f"Training time (s): {time() - start_time}")
-
-    # save training statistics
-    with open(join(training_path, "training_history.pkl"), "wb") as f:
-        pickle.dump(agent.history, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 if __name__ == "__main__":
