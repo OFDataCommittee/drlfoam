@@ -113,7 +113,7 @@ def main(args):
         states, actions, rewards = buffer.observations
         print_statistics(actions, rewards)
         agent.update(states, actions, rewards)
-        agent.save_state(join(training_path, f"checkpoint.pt"))
+        agent.save_state(join(training_path, f"checkpoint_{e}.pt"))
         current_policy = agent.trace_policy()
         buffer.update_policy(current_policy)
         current_policy.save(join(training_path, f"policy_trace_{e}.pt"))

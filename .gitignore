@@ -8,6 +8,9 @@ test_training
 openfoam/libs
 *.sif
 pydrl
+examples/training*
+examples/visual
+examples/analyze_training.ipynb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
