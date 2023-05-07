@@ -53,11 +53,9 @@ Usage
     }
     \endverbatim
 
-    The \c omega entry is a Function1 of time, see Foam::Function1Types.
-
+   
 See also
     Foam::fixedValueFvPatchField
-    Foam::Function1Types
 
 SourceFiles
     agentRotatingWallVelocityFvPatchVectorField.C
@@ -100,7 +98,7 @@ class agentRotatingWallVelocityFvPatchVectorField
         //- name of the PyTorch angular velocity model
         word policy_name_;
 
-        //- PyTorch model predicting mean and log(std) of angular velocity
+        //- PyTorch model of angular velocity
         torch::jit::script::Module policy_;
 
         //- largest allowed absolute value of angular velocity
