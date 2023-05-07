@@ -1,0 +1,60 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  com                                   |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volVectorField;
+    arch        "LSB;label=32;scalar=64";
+    location    "0";
+    object      U;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [ 0 1 -1 0 0 0 0 ];
+
+internalField   uniform ( 0 0 0 );
+
+boundaryField
+{
+    inlet // Note that the inlet patch consists of the boundary surface area at the inlet, top and bottom of the mesh
+    {
+        type            fixedValue;
+        value           uniform (1 0 0);
+    }
+
+    outlet
+    {
+        type            zeroGradient;
+    }
+
+    cylinders
+    {
+        type            pinballRotatingWallVelocity;
+        origin_a        (-1.299 0.0 0.0);
+        origin_b        (0.0 0.75 0.0);
+        origin_c        (0.0 -0.75 0.0);
+        axis            (0 0 1);
+        policy          "policy.pt";
+        probesDict      "probes";
+        train           true;
+        seed            0;
+        absOmegaMax_a   5.0;
+        absOmegaMax_b   5.0;
+        absOmegaMax_c   5.0;
+        value           uniform (0 0 0);
+    }
+
+    "(front|back)"
+    {
+        type            empty;
+    }
+}
+
+
+// ************************************************************************* //

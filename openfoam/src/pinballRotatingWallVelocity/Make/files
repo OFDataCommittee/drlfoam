@@ -1,0 +1,2 @@
+pinballRotatingWallVelocityFvPatchVectorField.C
+LIB = $(DRL_LIBBIN)/libPinballRotatingWallVelocity

@@ -1,0 +1,176 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+libs ("${DRL_LIBBIN}/libPinballRotatingWallVelocity.so");
+
+application     pimpleFoam;
+
+startFrom       latestTime;
+
+startTime       0;
+
+stopAt          endTime;
+
+endTime         300.0;
+
+deltaT          5.0e-3;
+
+writeControl    runTime;
+
+writeInterval   1.0;
+
+purgeWrite      1;
+
+writeFormat     ascii;
+
+writePrecision  8;
+
+timeFormat      general;
+
+timePrecision   8;
+
+runTimeModifiable false;
+
+functions
+{
+    forces
+    {
+        type            forceCoeffs;
+        libs            (forces);
+        executeControl  timeStep;
+        executeInterval 100;
+        //writeControl  writeTime;
+        writeControl    timeStep;
+        writeInterval   100;
+        timeStart       300;
+        log yes;
+        writeFields     yes;
+
+        patches
+        (
+            cylinders
+        );
+        coefficients    (Cd Cl);
+        rhoInf      1;
+        rho         rhoInf;
+        CofR        (-0.433 0.0 0.0);
+        liftDir     (0 1 0);
+        dragDir     (1 0 0);
+        magUInf     1.0;
+        lRef        2.5;
+        Aref        0.05;
+    }
+    
+    field_cylinder_a
+    {
+        type            surfaceFieldValue;
+        libs            (fieldFunctionObjects);
+        fields          (forceCoeff);
+        writeControl    timeStep;
+        writeInterval   100;
+        timeStart       300;
+        operation       sum;
+        regionType      faceZone;
+        name            faceZone_a;
+        weightField     none;
+        writeFields     yes;
+        surfaceFormat   raw;
+    }
+
+    field_cylinder_b
+    {
+        type            surfaceFieldValue;
+        libs            (fieldFunctionObjects);
+        fields          (forceCoeff);
+        writeControl    timeStep;
+        writeInterval   100;
+        timeStart       300;
+        operation       sum;
+        regionType      faceZone;
+        name            faceZone_b;
+        weightField     none;
+        writeFields     yes;
+        surfaceFormat   raw;
+    }
+
+    field_cylinder_c
+    {
+
+        type            surfaceFieldValue;
+        libs            (fieldFunctionObjects);
+        fields          (forceCoeff);
+        writeControl    timeStep;
+        writeInterval   100;
+        timeStart       300;
+        operation       sum;
+        regionType      faceZone;
+        name            faceZone_c;
+        weightField     none;
+        writeFields     yes;
+        surfaceFormat   raw;
+    }
+
+    probes
+    {
+        type            probes;
+        libs            (sampling);
+
+        // Name of the directory for probe data
+        name            probes;
+
+        // Write at same frequency as fields
+        executeControl  timeStep;
+        executeInterval 100;
+        writeControl    timeStep;
+        writeInterval   100;
+        timeStart       300.0;
+
+        // Fields to be probed
+        fields          (p);
+
+        // Optional: do not recalculate cells if mesh moves
+        fixedLocations  true;
+
+        // Optional: interpolation scheme to use (default is cell)
+        interpolationScheme cell;
+
+        probeLocations
+        (
+            (-0.55 0.75 0.005)
+			(-0.55 -0.75 0.005)
+			(0.0 1.33 0.005)
+			(0.0 -1.33 0.005)
+			(0.45 1.1 0.005)
+			(0.45 -1.1 0.005)
+			(1.35 1.55 0.005)
+			(1.35 -1.55 0.005)
+			(1.35 0.8 0.005)
+			(1.35 -0.8 0.005)
+			(2.35 1.55 0.005)
+			(2.35 -1.55 0.005)
+			(2.35 0.8 0.005)
+			(2.35 -0.8 0.005)
+        );
+
+        // Optional: filter out points that haven't been found. Default
+        //           is to include them (with value -VGREAT)
+        includeOutOfBounds  false;
+    }
+
+}
+
+// ************************************************************************* //

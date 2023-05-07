@@ -1,0 +1,16 @@
+EXE_INC = \
+    -std=c++17 \
+    -Wno-deprecated-declarations -Wno-old-style-cast -Wno-redundant-move \
+    -I$(LIB_SRC)/finiteVolume/lnInclude \
+    -I$(LIB_SRC)/sampling/lnInclude \
+    -I$(LIB_SRC)/OpenFOAM/lnInclude \
+    -I$(DRL_TORCH)/include \
+    -I$(DRL_TORCH)/include/torch/csrc/api/include
+
+LIB_LIBS = \
+    -lfiniteVolume \
+    -rdynamic \
+    -Wl,-rpath,$(DRL_TORCH)/lib $(DRL_TORCH)/lib/libtorch.so $(DRL_TORCH)/lib/libc10.so \
+    -Wl,--no-as-needed,$(DRL_TORCH)/lib/libtorch_cpu.so \
+    -Wl,--as-needed $(DRL_TORCH)/lib/libc10.so \
+    -Wl,--no-as-needed,$(DRL_TORCH)/lib/libtorch.so
