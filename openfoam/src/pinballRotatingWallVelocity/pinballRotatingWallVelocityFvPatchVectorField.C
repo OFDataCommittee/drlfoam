@@ -60,9 +60,7 @@ Foam::pinballRotatingWallVelocityFvPatchVectorField::
       train_(dict.get<bool>("train")),
       policy_name_(dict.get<word>("policy")),
       policy_(torch::jit::load(policy_name_)),
-      abs_omega_max_a_(dict.get<scalar>("absOmegaMax_a")),
-      abs_omega_max_b_(dict.get<scalar>("absOmegaMax_b")),
-      abs_omega_max_c_(dict.get<scalar>("absOmegaMax_c")),
+      abs_omega_max_(dict.get<scalar>("absOmegaMax")),
       seed_(dict.get<int>("seed")),
       probes_name_(dict.get<word>("probesDict")),
       gen_(seed_),
@@ -96,9 +94,7 @@ Foam::pinballRotatingWallVelocityFvPatchVectorField::
       train_(ptf.train_),
       policy_name_(ptf.policy_name_),
       policy_(ptf.policy_),
-      abs_omega_max_a_(ptf.abs_omega_max_a_),
-      abs_omega_max_b_(ptf.abs_omega_max_b_),
-      abs_omega_max_c_(ptf.abs_omega_max_c_),
+      abs_omega_max_(ptf.abs_omega_max_),
       seed_(ptf.seed_),
       probes_name_(ptf.probes_name_),
       gen_(ptf.gen_),
@@ -127,9 +123,7 @@ Foam::pinballRotatingWallVelocityFvPatchVectorField::
       train_(rwvpvf.train_),
       policy_name_(rwvpvf.policy_name_),
       policy_(rwvpvf.policy_),
-      abs_omega_max_a_(rwvpvf.abs_omega_max_a_),
-      abs_omega_max_b_(rwvpvf.abs_omega_max_b_),
-      abs_omega_max_c_(rwvpvf.abs_omega_max_c_),
+      abs_omega_max_(rwvpvf.abs_omega_max_),
       seed_(rwvpvf.seed_),
       probes_name_(rwvpvf.probes_name_),
       gen_(rwvpvf.gen_),
@@ -159,9 +153,7 @@ Foam::pinballRotatingWallVelocityFvPatchVectorField::
       train_(rwvpvf.train_),
       policy_name_(rwvpvf.policy_name_),
       policy_(rwvpvf.policy_),
-      abs_omega_max_a_(rwvpvf.abs_omega_max_a_),
-      abs_omega_max_b_(rwvpvf.abs_omega_max_b_),
-      abs_omega_max_c_(rwvpvf.abs_omega_max_c_),
+      abs_omega_max_(rwvpvf.abs_omega_max_),
       seed_(rwvpvf.seed_),
       probes_name_(rwvpvf.probes_name_),
       gen_(rwvpvf.gen_),
@@ -250,9 +242,9 @@ void Foam::pinballRotatingWallVelocityFvPatchVectorField::updateCoeffs()
                 omega_pre_scale_c = alpha_c / (alpha_c + beta_c);
             }
             // rescale to actionspace
-            omega_a_ = (omega_pre_scale_a - 0.5) * 2 * abs_omega_max_a_;
-            omega_b_ = (omega_pre_scale_b - 0.5) * 2 * abs_omega_max_b_;
-            omega_c_ = (omega_pre_scale_c - 0.5) * 2 * abs_omega_max_c_;
+            omega_a_ = (omega_pre_scale_a - 0.5) * 2 * abs_omega_max_;
+            omega_b_ = (omega_pre_scale_b - 0.5) * 2 * abs_omega_max_;
+            omega_c_ = (omega_pre_scale_c - 0.5) * 2 * abs_omega_max_;
             // save trajectory
             saveTrajectory(alpha_a, beta_a, alpha_b, beta_b, alpha_c, beta_c);
             Info << "New omega_a: " << omega_a_ << "; old value: " << omega_old_a_ << "\n";
@@ -314,9 +306,7 @@ void Foam::pinballRotatingWallVelocityFvPatchVectorField::write(Ostream &os) con
     os.writeEntry("axis", axis_);
     os.writeEntry("policy", policy_name_);
     os.writeEntry("train", train_);
-    os.writeEntry("absOmegaMax_a", abs_omega_max_a_);
-    os.writeEntry("absOmegaMax_b", abs_omega_max_b_);
-    os.writeEntry("absOmegaMax_c", abs_omega_max_c_);
+    os.writeEntry("absOmegaMax", abs_omega_max_);
     os.writeEntry("seed", seed_);
     os.writeEntry("probesDict", probes_name_);
 }

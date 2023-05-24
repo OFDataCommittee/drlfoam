@@ -21,6 +21,13 @@ class TestPPOAgent():
         assert len(hist["policy_loss"]) == 1
         assert "value_loss" in hist
         assert len(hist["value_loss"]) == 1
+        # test multiple actions
+        actions = [pt.rand((10, 3)) for _ in range(5)]
+        agent = PPOAgent(100, 3, pt.tensor(-10), pt.tensor(10))
+        agent.update(states, actions, rewards)
+        assert "policy_loss" in hist
+        assert len(hist["policy_loss"]) == 1
+        
 
     def test_save_load(self):
         states = pt.rand((5, 100))

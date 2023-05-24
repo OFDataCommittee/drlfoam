@@ -44,9 +44,7 @@ boundaryField
         probesDict      "probes";
         train           true;
         seed            0;
-        absOmegaMax_a   5.0;
-        absOmegaMax_b   5.0;
-        absOmegaMax_c   5.0;
+        absOmegaMax     5.0;
         value           uniform (0 0 0);
     }
 

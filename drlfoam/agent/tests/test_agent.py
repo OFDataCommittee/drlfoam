@@ -56,8 +56,8 @@ class TestFCPolicy():
         states, actions = pt.rand((20, 100)), pt.rand((20, 2))
         policy = FCPolicy(100, 2, pt.tensor(-10), pt.tensor(10))
         logp, entropy = policy.predict(states, actions)
-        assert logp.shape == (20, 2)
-        assert entropy.shape == (20, 2)
+        assert logp.shape == (20*2,)
+        assert entropy.shape == (20*2,)
 
     def test_tracing(self):
         policy = FCPolicy(100, 1, pt.tensor(-10), pt.tensor(10))

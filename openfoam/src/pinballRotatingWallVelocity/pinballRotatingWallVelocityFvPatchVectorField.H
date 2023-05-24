@@ -56,9 +56,7 @@ Usage
         policy          "policy.pt"
         seed            0;
         train           true;
-        absOmegaMax_a     0.05;
-        absOmegaMax_b     0.05;
-        absOmegaMax_b     0.05;
+        absOmegaMax     5.0;
     }
     \endverbatim
 
@@ -114,14 +112,8 @@ class pinballRotatingWallVelocityFvPatchVectorField
         //- PyTorch model predicting mean and log(std) of angular velocity
         torch::jit::script::Module policy_;
 
-        //- largest allowed absolute value of angular velocity of cylinder a
-        scalar abs_omega_max_a_;
-
-        //- largest allowed absolute value of angular velocity of cylinder b
-        scalar abs_omega_max_b_;
-
-        //- largest allowed absolute value of angular velocity of cylinder c
-        scalar abs_omega_max_c_;
+        //- largest allowed absolute value of angular velocity
+        scalar abs_omega_max_;
 
         //- seed for random sampling
         int seed_;

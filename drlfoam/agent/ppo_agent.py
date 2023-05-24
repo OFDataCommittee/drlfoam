@@ -83,6 +83,7 @@ class PPOAgent(Agent):
         # create tensors with all but the final state/action of each trajectory for convenience
         states_wf = pt.cat([s[:-1] for s in states])
         actions_wf = pt.cat([a[:-1] for a in actions])
+        n_actions = 1 if len(actions_wf.shape) == 1 else actions_wf.shape[-1]
 
         # policy update
         p_loss_, e_loss_, kl_ = [], [], []
@@ -91,8 +92,8 @@ class PPOAgent(Agent):
             # compute loss and update weights
             log_p_new, entropy = self._policy.predict(states_wf, actions_wf)
             p_ratio = (log_p_new - log_p_old).exp()
-            policy_objective = gaes * p_ratio
-            policy_objective_clipped = gaes * \
+            policy_objective = gaes.repeat(n_actions) * p_ratio
+            policy_objective_clipped = gaes.repeat(n_actions) * \
                 p_ratio.clamp(1.0 - self._policy_clip, 1.0 + self._policy_clip)
             policy_loss = -pt.min(policy_objective, policy_objective_clipped).mean()
             entropy_loss = -entropy.mean() * self._entropy_weight

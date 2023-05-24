@@ -1,8 +1,6 @@
 """ Example training script.
 """
 
-
-
 import argparse
 from shutil import copytree
 import pickle
@@ -14,9 +12,15 @@ from time import time
 BASE_PATH = environ.get("DRL_BASE", "")
 sys.path.insert(0, BASE_PATH)
 
-from drlfoam.environment import RotatingCylinder2D
+from drlfoam.environment import RotatingCylinder2D, RotatingPinball2D
 from drlfoam.agent import PPOAgent
 from drlfoam.execution import LocalBuffer, SlurmBuffer, SlurmConfig
+
+
+SIMULATION_ENVIRONMENTS = {
+    "rotatingCylinder2D" : RotatingCylinder2D,
+    "rotatingPinball2D" : RotatingPinball2D
+}
 
 
 def print_statistics(actions, rewards):
@@ -48,6 +52,8 @@ def parseArguments():
                     help="Maximum allowed runtime of a single simulation in seconds.")
     ag.add_argument("-c", "--checkpoint", required=False, default="", type=str,
                     help="Load training state from checkpoint file.")
+    ag.add_argument("-s", "--simulation", required=False, default="rotatingCylinder2D", type=str,
+                    help="Select the simulation environment.")
     args = ag.parse_args()
     return args
 
@@ -62,14 +68,20 @@ def main(args):
     executer = args.environment
     timeout = args.timeout
     checkpoint_file = args.checkpoint
+    simulation = args.simulation
 
     # create a directory for training
     makedirs(training_path, exist_ok=True)
 
     # make a copy of the base environment
-    copytree(join(BASE_PATH, "openfoam", "test_cases", "rotatingCylinder2D"),
+    if not simulation in SIMULATION_ENVIRONMENTS.keys():
+        msg = (f"Unknown simulation environment {simulation}" +
+              "Available options are:\n\n" +
+              "\n".join(SIMULATION_ENVIRONMENTS.keys()) + "\n")
+        raise ValueError(msg)
+    copytree(join(BASE_PATH, "openfoam", "test_cases", simulation),
              join(training_path, "base"), dirs_exist_ok=True)
-    env = RotatingCylinder2D()
+    env = SIMULATION_ENVIRONMENTS[simulation]()
     env.path = join(training_path, "base")
 
     # create buffer
@@ -78,7 +90,7 @@ def main(args):
     elif executer == "slurm":
         # Typical Slurm configs for TU Braunschweig cluster
         config = SlurmConfig(
-            n_tasks=2, n_nodes=1, partition="standard", time="00:30:00",
+            n_tasks=env.mpi_ranks, n_nodes=1, partition="standard", time="00:30:00",
             modules=["singularity/latest", "mpi/openmpi/4.1.1/gcc"]
         )
         buffer = SlurmBuffer(training_path, env,
@@ -88,8 +100,8 @@ def main(args):
             f"Unknown executer {executer}; available options are 'local' and 'slurm'.")
 
     # create PPO agent
-    agent = PPOAgent(env.n_states, env.n_actions, -
-                     env.action_bounds, env.action_bounds)
+    agent = PPOAgent(env.n_states, env.n_actions,
+                     -env.action_bounds, env.action_bounds)
 
     # load checkpoint if provided
     if checkpoint_file:
