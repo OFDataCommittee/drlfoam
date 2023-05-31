@@ -3,23 +3,53 @@
 
 import argparse
 from shutil import copytree
-import pickle
 from os.path import join
 from os import makedirs
 import sys
 from os import environ
 from time import time
+import logging
 BASE_PATH = environ.get("DRL_BASE", "")
 sys.path.insert(0, BASE_PATH)
 
+import torch as pt
 from drlfoam.environment import RotatingCylinder2D, RotatingPinball2D
 from drlfoam.agent import PPOAgent
 from drlfoam.execution import LocalBuffer, SlurmBuffer, SlurmConfig
 
 
+logging.basicConfig(level=logging.INFO)
+
 SIMULATION_ENVIRONMENTS = {
     "rotatingCylinder2D" : RotatingCylinder2D,
     "rotatingPinball2D" : RotatingPinball2D
+}
+
+DEFAULT_NETWORKS = {
+    "rotatingCylinder2D" : {
+        "policy_dict" : {
+            "n_layers": 2,
+            "n_neurons": 64,
+            "activation": pt.nn.functional.relu
+        },
+        "value_dict" : {
+            "n_layers": 2,
+            "n_neurons": 64,
+            "activation": pt.nn.functional.relu
+        }
+    },
+    "rotatingPinball2D" : {
+        "policy_dict" : {
+            "n_layers": 2,
+            "n_neurons": 512,
+            "activation": pt.nn.functional.relu
+        },
+        "value_dict" : {
+            "n_layers": 2,
+            "n_neurons": 512,
+            "activation": pt.nn.functional.relu
+        }
+    }
 }
 
 
@@ -27,11 +57,11 @@ def print_statistics(actions, rewards):
     rt = [r.mean().item() for r in rewards]
     at_mean = [a.mean().item() for a in actions]
     at_std = [a.std().item() for a in actions]
-    print("Reward mean/min/max: ", sum(rt)/len(rt), min(rt), max(rt))
-    print("Mean action mean/min/max: ", sum(at_mean) /
-          len(at_mean), min(at_mean), max(at_mean))
-    print("Std. action mean/min/max: ", sum(at_std) /
-          len(at_std), min(at_std), max(at_std))
+    logging.info("Reward mean/min/max: ", sum(rt)/len(rt), min(rt), max(rt))
+    logging.info("Mean action mean/min/max: ", sum(at_mean) /
+                 len(at_mean), min(at_mean), max(at_mean))
+    logging.info("Std. action mean/min/max: ", sum(at_std) /
+                 len(at_std), min(at_std), max(at_std))
 
 
 def parseArguments():
@@ -90,7 +120,7 @@ def main(args):
     elif executer == "slurm":
         # Typical Slurm configs for TU Braunschweig cluster
         config = SlurmConfig(
-            n_tasks=env.mpi_ranks, n_nodes=1, partition="standard", time="00:30:00",
+            n_tasks=env.mpi_ranks, n_nodes=1, partition="standard", time="02:00:00",
             modules=["singularity/latest", "mpi/openmpi/4.1.1/gcc"]
         )
         buffer = SlurmBuffer(training_path, env,
@@ -100,12 +130,12 @@ def main(args):
             f"Unknown executer {executer}; available options are 'local' and 'slurm'.")
 
     # create PPO agent
-    agent = PPOAgent(env.n_states, env.n_actions,
-                     -env.action_bounds, env.action_bounds)
+    agent = PPOAgent(env.n_states, env.n_actions, -env.action_bounds, env.action_bounds,
+                     **DEFAULT_NETWORKS[simulation])
 
     # load checkpoint if provided
     if checkpoint_file:
-        print(f"Loading checkpoint from file {checkpoint_file}")
+        logging.info(f"Loading checkpoint from file {checkpoint_file}")
         agent.load_state(join(training_path, checkpoint_file))
         starting_episode = agent.history["episode"][-1] + 1
         buffer._n_fills = starting_episode
@@ -120,7 +150,7 @@ def main(args):
     # begin training
     start_time = time()
     for e in range(starting_episode, episodes):
-        print(f"Start of episode {e}")
+        logging.info(f"Start of episode {e}")
         buffer.fill()
         states, actions, rewards = buffer.observations
         print_statistics(actions, rewards)
@@ -129,8 +159,9 @@ def main(args):
         current_policy = agent.trace_policy()
         buffer.update_policy(current_policy)
         current_policy.save(join(training_path, f"policy_trace_{e}.pt"))
-        buffer.reset()
-    print(f"Training time (s): {time() - start_time}")
+        if not e == episodes - 1:
+            buffer.reset()
+    logging.info(f"Training time (s): {time() - start_time}")
 
 
 if __name__ == "__main__":

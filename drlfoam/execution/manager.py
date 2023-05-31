@@ -1,6 +1,7 @@
 
 from threading import Thread
 from queue import Queue
+import logging
 
 
 def string_args(args: list, kwargs: dict):
@@ -28,14 +29,14 @@ class Runner(Thread):
         while not self._tasks.empty():
             try:
                 func, args, kwargs = self._tasks.get()
-                print(f"{self._name}: {func.__name__}({string_args(args, kwargs)})")
+                logging.info(f"{self._name}: {func.__name__}({string_args(args, kwargs)})")
                 func(*args, **kwargs)
             except Exception as e:
-                print(f"{self._name}: ", e)
+                logging.warning(f"{self._name}: " + str(e))
             finally:
                 self._tasks.task_done()
 
-        print(f"{self._name}: all tasks done")
+        logging.info(f"{self._name}: all tasks done")
 
     
 class TaskManager(Queue):

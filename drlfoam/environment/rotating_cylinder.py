@@ -6,6 +6,7 @@ from glob import glob
 from re import sub
 from io import StringIO
 from shutil import rmtree
+import logging
 from pandas import read_csv, DataFrame
 import torch as pt
 from .environment import Environment
@@ -175,7 +176,7 @@ class RotatingCylinder2D(Environment):
             obs["alpha"] = pt.from_numpy(tr["alpha"].values)
             obs["beta"] = pt.from_numpy(tr["beta"].values)
         except Exception as e:
-            print("Could not parse observations: ", e)
+            logging.warning("Could not parse observations: ", e)
         finally:
             return obs
 

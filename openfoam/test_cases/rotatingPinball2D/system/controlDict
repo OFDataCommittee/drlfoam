@@ -25,13 +25,13 @@ startTime       0;
 
 stopAt          endTime;
 
-endTime         300.0;
+endTime         200.0;
 
-deltaT          5.0e-3;
+deltaT          1.0e-2;
 
 writeControl    runTime;
 
-writeInterval   1.0;
+writeInterval   0.5;
 
 purgeWrite      1;
 
@@ -55,7 +55,7 @@ functions
         executeInterval 0.5;
         writeControl    runTime;
         writeInterval   0.5;
-        timeStart       300;
+        timeStart       200;
         log yes;
         writeFields     yes;
 
@@ -83,7 +83,7 @@ functions
         executeInterval 0.5;
         writeControl    runTime;
         writeInterval   0.5;
-        timeStart       300;
+        timeStart       200;
         operation       sum;
         regionType      faceZone;
         name            faceZone_a;
@@ -101,7 +101,7 @@ functions
         executeInterval 0.5;
         writeControl    runTime;
         writeInterval   0.5;
-        timeStart       300;
+        timeStart       200;
         operation       sum;
         regionType      faceZone;
         name            faceZone_b;
@@ -120,7 +120,7 @@ functions
         executeInterval 0.5;
         writeControl    runTime;
         writeInterval   0.5;
-        timeStart       300;
+        timeStart       200;
         operation       sum;
         regionType      faceZone;
         name            faceZone_c;
@@ -142,7 +142,7 @@ functions
         executeInterval 0.5;
         writeControl    runTime;
         writeInterval   0.5;
-        timeStart       300.0;
+        timeStart       200;
 
         // Fields to be probed
         fields          (p);

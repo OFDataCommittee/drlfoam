@@ -6,6 +6,7 @@ from glob import glob
 from re import sub
 from io import StringIO
 from shutil import rmtree
+import logging
 from pandas import read_csv, DataFrame
 import torch as pt
 from .environment import Environment
@@ -98,17 +99,17 @@ def _parse_trajectory(path: str) -> DataFrame:
 
 
 class RotatingPinball2D(Environment):
-    def __init__(self, r1: float = 1.5, r2: float = 1.0, r3: float = 0.5):
+    def __init__(self, r1: float = 1.5, r2: float = 1.0, r3: float = 0.4):
         super(RotatingPinball2D, self).__init__(
             join(TESTCASE_PATH, "rotatingPinball2D"), "Allrun.pre",
-            "Allrun", "Allclean", 16, 14, 3
+            "Allrun", "Allclean", 8, 14, 3
         )
         self._r1 = r1
         self._r2 = r2
         self._r3 = r3
         self._initialized = False
         self._start_time = 0
-        self._end_time = 300
+        self._end_time = 200
         self._control_interval = 0.5
         self._train = True
         self._seed = 0
@@ -242,12 +243,12 @@ class RotatingPinball2D(Environment):
             )
 
         except Exception as e:
-            print("Could not parse observations: ", e)
+            logging.warning("Could not parse observations: ", e)
         finally:
             return obs
 
     def reset(self):
-        files = ["log.pimpleFoam", "finished.txt", "trajectory.csv"]
+        files = ["log.pimpleFoam", "trajectory.csv"]
         for f in files:
             f_path = join(self.path, f)
             if isfile(f_path):

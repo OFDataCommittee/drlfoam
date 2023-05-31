@@ -45,7 +45,6 @@ class FCPolicy(pt.nn.Module):
             for hidden in range(self._n_layers - 1):
                 self._layers.append(pt.nn.Linear(
                     self._n_neurons, self._n_neurons))
-        #self._layers.append(pt.nn.Linear(self._n_neurons, 2*self._n_actions))
         self._last_layer = pt.nn.Linear(self._n_neurons, 2*self._n_actions)
 
     @pt.jit.ignore

@@ -1,7 +1,7 @@
 
 from typing import List, Union
 from collections import defaultdict
-import pickle
+import logging
 import torch as pt
 from .agent import Agent, FCPolicy, FCValue, compute_gae, compute_returns
 from ..constants import EPS_SP, DEFAULT_TENSOR_TYPE
@@ -110,7 +110,7 @@ class PPOAgent(Agent):
                 kl = (log_p_old - log_p).mean()
                 kl_.append(kl.item())
                 if kl.item() > self._policy_kl_stop:
-                    print(f"Stopping policy training after {e} epochs due to KL-criterion.")
+                    logging.info(f"Stopping policy training after {e} epochs due to KL-criterion.")
                     break
 
         # value update
@@ -136,7 +136,7 @@ class PPOAgent(Agent):
                 mse = (values - values_check).pow(2).mul(0.5).mean()
                 mse_.append(mse.item())
                 if mse.item() > self._value_mse_stop:
-                    print(f"Stopping value training after {e} epochs due to MSE-criterion.")
+                    logging.info(f"Stopping value training after {e} epochs due to MSE-criterion.")
                     break
 
         # save history

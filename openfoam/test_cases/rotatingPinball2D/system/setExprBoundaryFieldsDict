@@ -1,7 +1,7 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  v1912                                 |
+|  \\    /   O peration     | Version:  v2006                                 |
 |   \\  /    A nd           | Website:  www.openfoam.com                      |
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
@@ -9,27 +9,25 @@ FoamFile
 {
     version     2.0;
     format      ascii;
-    class       volScalarField;
-    object      p;
+    class       dictionary;
+    object      setExprBoundaryFieldsDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-dimensions      [0 2 -2 0 0 0 0];
-
-internalField   uniform 0;
-
-boundaryField
+U_inlet
 {
-    "(inlet|cylinders|outlet)"
-    {
-        type            zeroGradient;
-    }
+    field   U;
 
-    "(front|back)"
-    {
-        type            empty;
-    }
+    expressions
+    (
+        {
+            patch   inlet;
+            target  value;
+            vel { dir (1 0 0); }
+            expression #{ (pos().y() < 0.0) ? 1.01*$[(vector)vel.dir] : 0.99*$[(vector)vel.dir] #};   
+        }
+    );
 }
 
-
 // ************************************************************************* //
+
