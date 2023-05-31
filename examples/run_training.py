@@ -57,11 +57,10 @@ def print_statistics(actions, rewards):
     rt = [r.mean().item() for r in rewards]
     at_mean = [a.mean().item() for a in actions]
     at_std = [a.std().item() for a in actions]
-    logging.info("Reward mean/min/max: ", sum(rt)/len(rt), min(rt), max(rt))
-    logging.info("Mean action mean/min/max: ", sum(at_mean) /
-                 len(at_mean), min(at_mean), max(at_mean))
-    logging.info("Std. action mean/min/max: ", sum(at_std) /
-                 len(at_std), min(at_std), max(at_std))
+    reward_msg = f"Reward mean/min/max: {sum(rt)/len(rt):2.4f}/{min(rt):2.4f}/{max(rt):2.4f}"
+    action_mean_msg = f"Mean action mean/min/max: {sum(at_mean)/len(at_mean):2.4f}/{min(at_mean):2.4f}/{max(at_mean):2.4f}"
+    action_std_msg = f"Std. action mean/min/max: {sum(at_std)/len(at_std):2.4f}/{min(at_std):2.4f}/{max(at_std):2.4f}"
+    logging.info("\n".join((reward_msg, action_mean_msg, action_std_msg)))
 
 
 def parseArguments():
