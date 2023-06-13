@@ -11,6 +11,9 @@ pydrl
 examples/training*
 examples/visual
 examples/analyze_training.ipynb
+examples/test*
+*.out
+log.*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

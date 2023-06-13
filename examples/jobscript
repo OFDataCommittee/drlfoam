@@ -1,0 +1,12 @@
+#!/bin/bash
+#SBATCH --job-name=lr2_pinball_main
+#SBATCH --ntasks=6
+#SBATCH --output=%x_%j.out
+#SBATCH --partition=queue-1
+#SBATCH --constraint=c5a.24xlarge
+
+source /fsx/OpenFOAM/OpenFOAM-v2206/etc/bashrc
+source /fsx/drlfoam_main/setup-env
+source /fsx/drlfoam_main/pydrl/bin/activate
+
+python3 run_training.py -o test_pinball_lr2 -i 100 -r 10 -b 10 -f 300 -s rotatingPinball2D -e slurm &> log.pinball_main_lr2

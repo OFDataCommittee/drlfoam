@@ -20,12 +20,13 @@ from drlfoam.execution import LocalBuffer, SlurmBuffer, SlurmConfig
 
 logging.basicConfig(level=logging.INFO)
 
+
 SIMULATION_ENVIRONMENTS = {
     "rotatingCylinder2D" : RotatingCylinder2D,
     "rotatingPinball2D" : RotatingPinball2D
 }
 
-DEFAULT_NETWORKS = {
+DEFAULT_CONFIG = {
     "rotatingCylinder2D" : {
         "policy_dict" : {
             "n_layers": 2,
@@ -48,7 +49,9 @@ DEFAULT_NETWORKS = {
             "n_layers": 2,
             "n_neurons": 512,
             "activation": pt.nn.functional.relu
-        }
+        },
+        "policy_lr" : 4.0e-4,
+        "value_lr" : 4.0e-4
     }
 }
 
@@ -57,11 +60,10 @@ def print_statistics(actions, rewards):
     rt = [r.mean().item() for r in rewards]
     at_mean = [a.mean().item() for a in actions]
     at_std = [a.std().item() for a in actions]
-    logging.info("Reward mean/min/max: ", sum(rt)/len(rt), min(rt), max(rt))
-    logging.info("Mean action mean/min/max: ", sum(at_mean) /
-                 len(at_mean), min(at_mean), max(at_mean))
-    logging.info("Std. action mean/min/max: ", sum(at_std) /
-                 len(at_std), min(at_std), max(at_std))
+    reward_msg = f"Reward mean/min/max: {sum(rt)/len(rt):2.4f}/{min(rt):2.4f}/{max(rt):2.4f}"
+    action_mean_msg = f"Mean action mean/min/max: {sum(at_mean)/len(at_mean):2.4f}/{min(at_mean):2.4f}/{max(at_mean):2.4f}"
+    action_std_msg = f"Std. action mean/min/max: {sum(at_std)/len(at_std):2.4f}/{min(at_std):2.4f}/{max(at_std):2.4f}"
+    logging.info("\n".join((reward_msg, action_mean_msg, action_std_msg)))
 
 
 def parseArguments():
@@ -120,8 +122,9 @@ def main(args):
     elif executer == "slurm":
         # Typical Slurm configs for TU Braunschweig cluster
         config = SlurmConfig(
-            n_tasks=env.mpi_ranks, n_nodes=1, partition="standard", time="02:00:00",
-            modules=["singularity/latest", "mpi/openmpi/4.1.1/gcc"]
+            n_tasks=env.mpi_ranks, n_nodes=1, partition="queue-1", time="03:00:00",
+            constraint="c5a.24xlarge", modules=["openmpi/4.1.5"],
+            commands_pre=["source /fsx/OpenFOAM/OpenFOAM-v2206/etc/bashrc", "source /fsx/drlfoam_main/setup-env"]
         )
         buffer = SlurmBuffer(training_path, env,
                              buffer_size, n_runners, config, timeout=timeout)
@@ -131,7 +134,7 @@ def main(args):
 
     # create PPO agent
     agent = PPOAgent(env.n_states, env.n_actions, -env.action_bounds, env.action_bounds,
-                     **DEFAULT_NETWORKS[simulation])
+                     **DEFAULT_CONFIG[simulation])
 
     # load checkpoint if provided
     if checkpoint_file:

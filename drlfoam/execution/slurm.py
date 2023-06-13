@@ -57,7 +57,6 @@ def submit_and_wait(jobscript: str, wait: int = 5, timeout: int = 1e15):
             else:
                 running = False
         except Exception as e:
-            logging.warning(e)
             running = False
 
 

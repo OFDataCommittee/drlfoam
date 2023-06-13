@@ -70,7 +70,7 @@ class FCPolicy(pt.nn.Module):
         if len(actions.shape) == 1:
             return log_p.squeeze(), beta.entropy().squeeze()
         else:
-            return log_p.flatten(), beta.entropy().flatten()
+            return log_p.sum(dim=1), beta.entropy().sum(dim=1)
 
 
 class FCValue(pt.nn.Module):

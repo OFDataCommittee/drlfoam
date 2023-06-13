@@ -92,8 +92,8 @@ class PPOAgent(Agent):
             # compute loss and update weights
             log_p_new, entropy = self._policy.predict(states_wf, actions_wf)
             p_ratio = (log_p_new - log_p_old).exp()
-            policy_objective = gaes.repeat(n_actions) * p_ratio
-            policy_objective_clipped = gaes.repeat(n_actions) * \
+            policy_objective = gaes * p_ratio
+            policy_objective_clipped = gaes * \
                 p_ratio.clamp(1.0 - self._policy_clip, 1.0 + self._policy_clip)
             policy_loss = -pt.min(policy_objective, policy_objective_clipped).mean()
             entropy_loss = -entropy.mean() * self._entropy_weight
