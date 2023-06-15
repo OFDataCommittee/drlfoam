@@ -1,10 +1,9 @@
-from os.path import join
+from os.path import join, exists
 from abc import ABC, abstractmethod
 from subprocess import Popen
 from typing import Tuple, List
 from shutil import copytree
 from copy import deepcopy
-import pickle
 import torch as pt
 from .manager import TaskManager
 from ..agent import FCPolicy
@@ -43,7 +42,8 @@ class Buffer(ABC):
         envs = []
         for i in range(self._buffer_size):
             dest = join(self._path, f"copy_{i}")
-            copytree(self._base_env.path, dest, dirs_exist_ok=True)
+            if not exists(dest):
+                copytree(self._base_env.path, dest, dirs_exist_ok=True)
             envs.append(deepcopy(self._base_env))
             envs[-1].path = dest
             envs[-1].seed = i
@@ -52,6 +52,7 @@ class Buffer(ABC):
     def update_policy(self, policy: FCPolicy):
         for env in self.envs:
             policy.save(join(env.path, env.policy))
+        policy.save(join(self.base_env.path, self.base_env.policy))
 
     def reset(self):
         for env in self.envs:

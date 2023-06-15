@@ -3,7 +3,7 @@
 
 import argparse
 from shutil import copytree
-from os.path import join
+from os.path import join, exists
 from os import makedirs
 import sys
 from os import environ
@@ -111,8 +111,9 @@ def main(args):
               "Available options are:\n\n" +
               "\n".join(SIMULATION_ENVIRONMENTS.keys()) + "\n")
         raise ValueError(msg)
-    copytree(join(BASE_PATH, "openfoam", "test_cases", simulation),
-             join(training_path, "base"), dirs_exist_ok=True)
+    if not exists(join(training_path, "base")):
+        copytree(join(BASE_PATH, "openfoam", "test_cases", simulation),
+                join(training_path, "base"), dirs_exist_ok=True)
     env = SIMULATION_ENVIRONMENTS[simulation]()
     env.path = join(training_path, "base")
 
