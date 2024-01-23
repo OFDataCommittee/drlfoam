@@ -4,10 +4,12 @@
 
 ### Repository structure
 
-- **docs**: Sphinx documentation sources (TODO)
+- **docs**: Sphinx documentation sources (work in progress)
 - **drlfoam**: Python library for DRL with OpenFOAM
 - **examples**: annotated scripts for performing DRL trainings and tests
 - **openfoam**: OpenFOAM simulation setups (*test_cases*) and source files for additional OpenFOAM library components, e.g., boundary conditions (*src*)
+
+For a list of research projects employing drlFoam, refer to the [references](./references.md).
 
 ### drlFoam package
 
