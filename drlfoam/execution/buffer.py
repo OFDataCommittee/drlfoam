@@ -54,6 +54,8 @@ class Buffer(ABC):
                 copytree(self._base_env.path, dest, dirs_exist_ok=True)
             envs.append(deepcopy(self._base_env))
             envs[-1].path = dest
+            envs[-1].end_time = envs[-1].end_time
+            envs[-1].start_time = envs[-1].start_time
             envs[-1].seed = i
         self._envs = envs
 
