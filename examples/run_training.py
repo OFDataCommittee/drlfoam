@@ -1,57 +1,60 @@
 """ Example training script.
 """
-
+import sys
+import logging
 import argparse
+import torch as pt
+
+from time import time
+from os import environ
+from os import makedirs
 from shutil import copytree
 from os.path import join, exists
-from os import makedirs
-import sys
-from os import environ
-from time import time
-import logging
+
+
 BASE_PATH = environ.get("DRL_BASE", "")
 sys.path.insert(0, BASE_PATH)
 
-import torch as pt
-from drlfoam.environment import RotatingCylinder2D, RotatingPinball2D
 from drlfoam.agent import PPOAgent
+from drlfoam import check_finish_time
+from examples.create_dummy_policy import create_dummy_policy
+from drlfoam.environment import RotatingCylinder2D, RotatingPinball2D
 from drlfoam.execution import LocalBuffer, SlurmBuffer, SlurmConfig
 
-
 logging.basicConfig(level=logging.INFO)
-
+logger = logging.getLogger(__name__)
 
 SIMULATION_ENVIRONMENTS = {
-    "rotatingCylinder2D" : RotatingCylinder2D,
-    "rotatingPinball2D" : RotatingPinball2D
+    "rotatingCylinder2D": RotatingCylinder2D,
+    "rotatingPinball2D": RotatingPinball2D
 }
 
 DEFAULT_CONFIG = {
-    "rotatingCylinder2D" : {
-        "policy_dict" : {
+    "rotatingCylinder2D": {
+        "policy_dict": {
             "n_layers": 2,
             "n_neurons": 64,
             "activation": pt.nn.functional.relu
         },
-        "value_dict" : {
+        "value_dict": {
             "n_layers": 2,
             "n_neurons": 64,
             "activation": pt.nn.functional.relu
         }
     },
-    "rotatingPinball2D" : {
-        "policy_dict" : {
+    "rotatingPinball2D": {
+        "policy_dict": {
             "n_layers": 2,
             "n_neurons": 512,
             "activation": pt.nn.functional.relu
         },
-        "value_dict" : {
+        "value_dict": {
             "n_layers": 2,
             "n_neurons": 512,
             "activation": pt.nn.functional.relu
         },
-        "policy_lr" : 4.0e-4,
-        "value_lr" : 4.0e-4
+        "policy_lr": 4.0e-4,
+        "value_lr": 4.0e-4
     }
 }
 
@@ -60,10 +63,10 @@ def print_statistics(actions, rewards):
     rt = [r.mean().item() for r in rewards]
     at_mean = [a.mean().item() for a in actions]
     at_std = [a.std().item() for a in actions]
-    reward_msg = f"Reward mean/min/max: {sum(rt)/len(rt):2.4f}/{min(rt):2.4f}/{max(rt):2.4f}"
-    action_mean_msg = f"Mean action mean/min/max: {sum(at_mean)/len(at_mean):2.4f}/{min(at_mean):2.4f}/{max(at_mean):2.4f}"
-    action_std_msg = f"Std. action mean/min/max: {sum(at_std)/len(at_std):2.4f}/{min(at_std):2.4f}/{max(at_std):2.4f}"
-    logging.info("\n".join((reward_msg, action_mean_msg, action_std_msg)))
+    reward_msg = f"Reward mean/min/max: {sum(rt) / len(rt):2.4f}/{min(rt):2.4f}/{max(rt):2.4f}"
+    action_mean_msg = f"Mean action mean/min/max: {sum(at_mean) / len(at_mean):2.4f}/{min(at_mean):2.4f}/{max(at_mean):2.4f}"
+    action_std_msg = f"Std. action mean/min/max: {sum(at_std) / len(at_std):2.4f}/{min(at_std):2.4f}/{max(at_std):2.4f}"
+    logger.info("\n".join((reward_msg, action_mean_msg, action_std_msg)))
 
 
 def parseArguments():
@@ -97,38 +100,40 @@ def main(args):
     buffer_size = args.buffer
     n_runners = args.runners
     end_time = args.finish
-    executer = args.environment
+    executer = args.environment.lower()
     timeout = args.timeout
-    checkpoint_file = args.checkpoint
-    simulation = args.simulation
+    checkpoint_file = str(args.checkpoint)
+    simulation = str(args.simulation)
 
     # create a directory for training
     makedirs(training_path, exist_ok=True)
 
     # make a copy of the base environment
-    if not simulation in SIMULATION_ENVIRONMENTS.keys():
+    if simulation not in SIMULATION_ENVIRONMENTS.keys():
         msg = (f"Unknown simulation environment {simulation}" +
-              "Available options are:\n\n" +
-              "\n".join(SIMULATION_ENVIRONMENTS.keys()) + "\n")
+               "Available options are:\n\n" +
+               "\n".join(SIMULATION_ENVIRONMENTS.keys()) + "\n")
         raise ValueError(msg)
     if not exists(join(training_path, "base")):
         copytree(join(BASE_PATH, "openfoam", "test_cases", simulation),
-                join(training_path, "base"), dirs_exist_ok=True)
+                 join(training_path, "base"), dirs_exist_ok=True)
     env = SIMULATION_ENVIRONMENTS[simulation]()
     env.path = join(training_path, "base")
+
+    # check if the user-specified finish time is greater than the end time of the base case (required for training)
+    check_finish_time(BASE_PATH, end_time, simulation)
 
     # create buffer
     if executer == "local":
         buffer = LocalBuffer(training_path, env, buffer_size, n_runners, timeout=timeout)
     elif executer == "slurm":
-        # Typical Slurm configs for TU Braunschweig cluster
+        # Typical Slurm configs for TU Dresden cluster
         config = SlurmConfig(
-            n_tasks=env.mpi_ranks, n_nodes=1, partition="queue-1", time="03:00:00",
-            constraint="c5a.24xlarge", modules=["openmpi/4.1.5"],
-            commands_pre=["source /fsx/OpenFOAM/OpenFOAM-v2206/etc/bashrc", "source /fsx/drlfoam_main/setup-env"]
+            n_tasks_per_node=env.mpi_ranks, n_nodes=1, time="03:00:00", job_name="drl_train",
+            modules=["development/24.04 GCC/12.3.0", "OpenMPI/4.1.5", "OpenFOAM/v2312"],
+            commands_pre=["source $FOAM_BASH", f"source {BASE_PATH}/setup-env"]
         )
-        buffer = SlurmBuffer(training_path, env,
-                             buffer_size, n_runners, config, timeout=timeout)
+        buffer = SlurmBuffer(training_path, env, buffer_size, n_runners, config, timeout=timeout)
     else:
         raise ValueError(
             f"Unknown executer {executer}; available options are 'local' and 'slurm'.")
@@ -145,6 +150,10 @@ def main(args):
         buffer._n_fills = starting_episode
     else:
         starting_episode = 0
+
+        # create fresh random policy and execute the base case
+        create_dummy_policy(env.n_states, env.n_actions, env.path, env.action_bounds)
+
         buffer.prepare()
 
     buffer.base_env.start_time = buffer.base_env.end_time
@@ -154,7 +163,7 @@ def main(args):
     # begin training
     start_time = time()
     for e in range(starting_episode, episodes):
-        logging.info(f"Start of episode {e}")
+        logger.info(f"Start of episode {e}")
         buffer.fill()
         states, actions, rewards = buffer.observations
         print_statistics(actions, rewards)
@@ -165,7 +174,7 @@ def main(args):
         current_policy.save(join(training_path, f"policy_trace_{e}.pt"))
         if not e == episodes - 1:
             buffer.reset()
-    logging.info(f"Training time (s): {time() - start_time}")
+    logger.info(f"Training time (s): {time() - start_time}")
 
 
 if __name__ == "__main__":

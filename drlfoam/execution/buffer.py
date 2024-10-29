@@ -1,13 +1,21 @@
-from os.path import join, exists
-from abc import ABC, abstractmethod
+"""
+implements a base class for storing the buffer
+"""
+import logging
+import torch as pt
+
+from copy import deepcopy
+from shutil import copytree
 from subprocess import Popen
 from typing import Tuple, List
-from shutil import copytree
-from copy import deepcopy
-import torch as pt
-from .manager import TaskManager
+from os.path import join, exists
+from abc import ABC, abstractmethod
+
 from ..agent import FCPolicy
+from .manager import TaskManager
 from ..environment import Environment
+
+logger = logging.getLogger(__name__)
 
 
 class Buffer(ABC):
@@ -80,7 +88,7 @@ class Buffer(ABC):
         return self._envs
 
     @property
-    def observations(self) -> Tuple[List[pt.Tensor]]:
+    def observations(self) -> Tuple[List[pt.Tensor], List[pt.Tensor], List[pt.Tensor]]:
         states, actions, rewards = [], [], []
         for env in self.envs:
             obs = env.observations
@@ -89,5 +97,5 @@ class Buffer(ABC):
                 actions.append(obs["actions"])
                 rewards.append(obs["rewards"])
             else:
-                print(f"Warning: environment {env.path} returned empty observations")
+                logger.warning(f"Warning: environment {env.path} returned empty observations")
         return states, actions, rewards

@@ -1,12 +1,16 @@
+"""
+implements PPO-agent
+"""
+import logging
+import torch as pt
 
 from typing import List, Union
 from collections import defaultdict
-import logging
-import torch as pt
+
 from .agent import Agent, FCPolicy, FCValue, compute_gae, compute_returns
 from ..constants import EPS_SP, DEFAULT_TENSOR_TYPE
 
-
+logger = logging.getLogger(__name__)
 pt.set_default_tensor_type(DEFAULT_TENSOR_TYPE)
 
 DEFAULT_FC_DICT = {
@@ -21,13 +25,13 @@ PPO_STATE_KEYS = ("policy_state", "value_state", "policy_optimizer_state",
 
 class PPOAgent(Agent):
     def __init__(self, n_states, n_actions, action_min, action_max,
-                 policy_dict: dict = DEFAULT_FC_DICT,
+                 policy_dict=None,
                  policy_epochs: int = 100,
                  policy_lr: float = 0.001,
                  policy_clip: float = 0.1,
                  policy_grad_norm: float = float("inf"),
                  policy_kl_stop: float = 0.2,
-                 value_dict: dict = DEFAULT_FC_DICT,
+                 value_dict=None,
                  value_epochs: int = 100,
                  value_lr: float = 0.0005,
                  value_clip: float = 0.1,
@@ -37,6 +41,34 @@ class PPOAgent(Agent):
                  lam: float = 0.97,
                  entropy_weight: float = 0.01
                  ):
+        """
+        implements PPO-agent class
+
+        :param n_states: number of states
+        :param n_actions: number of actions
+        :param action_min: lower action bound
+        :param action_max: upper action bound
+        :param policy_dict: dict specifying the policy network architecture, if 'None' the default dict is used
+        :param policy_epochs: number of epochs to run for the policy network
+        :param policy_lr: learning rate for the policy network
+        :param policy_clip: value for clipping the update of the policy network
+        :param policy_grad_norm: clipping value for the gradient of the policy network
+        :param policy_kl_stop: value for KL-divergence criteria for stopping the training (policy network)
+        :param value_dict: dict specifying the value network architecture, if 'None' the default dict is used
+        :param value_epochs: number of epochs to run for the value network
+        :param value_lr: learning rate for the value network
+        :param value_clip: value for clipping the update of the value network
+        :param value_grad_norm: clipping value for the gradient of the value network
+        :param value_mse_stop: value for MSE-divergence criteria for stopping the training (value network)
+        :param gamma: discount factor
+        :param lam: hyperparameter lambda for computing the GAE
+        :param entropy_weight: value for weighing the entropy
+        """
+        if value_dict is None:
+            value_dict = DEFAULT_FC_DICT
+        if policy_dict is None:
+            policy_dict = DEFAULT_FC_DICT
+
         self._n_states = n_states
         self._n_actions = n_actions
         self._action_min = action_min
@@ -56,45 +88,46 @@ class PPOAgent(Agent):
         self._entropy_weight = entropy_weight
 
         # networks and optimizers
-        self._policy = FCPolicy(self._n_states, self._n_actions, self._action_min,
-                                self._action_max, **policy_dict)
-        self._policy_optimizer = pt.optim.Adam(
-            self._policy.parameters(), lr=self._policy_lr
-        )
+        self._policy = FCPolicy(self._n_states, self._n_actions, self._action_min, self._action_max, **policy_dict)
+        self._policy_optimizer = pt.optim.Adam(self._policy.parameters(), lr=self._policy_lr)
         self._value = FCValue(self._n_states, **value_dict)
-        self._value_optimizer = pt.optim.Adam(
-            self._value.parameters(), lr=self._value_lr
-        )
+        self._value_optimizer = pt.optim.Adam(self._value.parameters(), lr=self._value_lr)
 
         # history
         self._history = defaultdict(list)
         self._update_counter = 0
 
     def update(self, states: List[pt.Tensor], actions: List[pt.Tensor],
-               rewards: List[pt.Tensor]):
+               rewards: List[pt.Tensor]) -> None:
+        """
+        update the policy and value network
 
+        :param states: states
+        :param actions: actions
+        :param rewards: rewards
+        :return: None
+        """
         values = [self._value(s).detach() for s in states]
         # compute log_p for all but the final experience tuple
         log_p_old = pt.cat([self._policy.predict(s[:-1], a[:-1])[0].detach() for s, a in zip(states, actions)])
         returns = pt.cat([compute_returns(r, self._gamma) for r in rewards])
         gaes = pt.cat([compute_gae(r, v, self._gamma, self._lam) for r, v in zip(rewards, values)])
-        gaes = (gaes - gaes.mean()) / (gaes.std() + EPS_SP)
+        gaes = (gaes - gaes.mean()) / (gaes.std(0) + EPS_SP)
         values = pt.cat(values)
         # create tensors with all but the final state/action of each trajectory for convenience
         states_wf = pt.cat([s[:-1] for s in states])
         actions_wf = pt.cat([a[:-1] for a in actions])
-        n_actions = 1 if len(actions_wf.shape) == 1 else actions_wf.shape[-1]
 
         # policy update
         p_loss_, e_loss_, kl_ = [], [], []
+        logger.info("Updating policy network.")
         for e in range(self._policy_epochs):
 
             # compute loss and update weights
             log_p_new, entropy = self._policy.predict(states_wf, actions_wf)
             p_ratio = (log_p_new - log_p_old).exp()
             policy_objective = gaes * p_ratio
-            policy_objective_clipped = gaes * \
-                p_ratio.clamp(1.0 - self._policy_clip, 1.0 + self._policy_clip)
+            policy_objective_clipped = gaes * p_ratio.clamp(1.0 - self._policy_clip, 1.0 + self._policy_clip)
             policy_loss = -pt.min(policy_objective, policy_objective_clipped).mean()
             entropy_loss = -entropy.mean() * self._entropy_weight
             self._policy_optimizer.zero_grad()
@@ -110,17 +143,16 @@ class PPOAgent(Agent):
                 kl = (log_p_old - log_p).mean()
                 kl_.append(kl.item())
                 if kl.item() > self._policy_kl_stop:
-                    logging.info(f"Stopping policy training after {e} epochs due to KL-criterion.")
+                    logger.info(f"Stopping policy training after {e} epochs due to KL-criterion.")
                     break
 
         # value update
         v_loss_, mse_ = [], []
+        logger.info("Updating value network.")
         for e in range(self._value_epochs):
             # compute loss and update weights
             values_new = self._value(pt.cat(states))
-            values_new_clipped = values + (values_new - values).clamp(
-                -self._value_clip, self._value_clip
-            )
+            values_new_clipped = values + (values_new - values).clamp(-self._value_clip, self._value_clip)
             v_loss = (returns - values_new).pow(2)
             v_loss_clipped = (returns - values_new_clipped).pow(2)
             value_loss = pt.max(v_loss, v_loss_clipped).mul(0.5).mean()
@@ -136,7 +168,7 @@ class PPOAgent(Agent):
                 mse = (values - values_check).pow(2).mul(0.5).mean()
                 mse_.append(mse.item())
                 if mse.item() > self._value_mse_stop:
-                    logging.info(f"Stopping value training after {e} epochs due to MSE-criterion.")
+                    logger.info(f"Stopping value training after {e} epochs due to MSE-criterion.")
                     break
 
         # save history
@@ -148,18 +180,19 @@ class PPOAgent(Agent):
         self._history["episode"].append(self._update_counter)
         self._update_counter += 1
 
-    def save_state(self, path: str):
+    def save_state(self, path: str) -> None:
         pt.save(self.state, path)
 
-    def load_state(self, state: Union[str, dict]):
+    def load_state(self, state: Union[str, dict]) -> None:
         if isinstance(state, str):
             state = pt.load(state)
         if not isinstance(state, dict):
-            raise ValueError("Unkown state format; state should be a state dictionary or the path to a state dictionary.")
+            raise ValueError(
+                "Unknown state format; state should be a state dictionary or the path to a state dictionary.")
         if not all([key in state.keys() for key in PPO_STATE_KEYS]):
             ValueError(
                 "One or more keys missing in state dictionary;\n" +
-                "provided keys: {:s}\n".format(", ".join(state.keys())) + 
+                "provided keys: {:s}\n".format(", ".join(state.keys())) +
                 "expected keys: {:s}".format(", ".join(PPO_STATE_KEYS))
             )
         self._policy.load_state_dict(state["policy_state"])
@@ -170,7 +203,7 @@ class PPOAgent(Agent):
         if self._history["episode"]:
             self._update_counter = self._history["episode"][-1]
 
-    def trace_policy(self):
+    def trace_policy(self) -> pt.jit.script:
         return pt.jit.script(self._policy)
 
     @property
@@ -180,9 +213,29 @@ class PPOAgent(Agent):
     @property
     def state(self) -> dict:
         return {
-            "policy_state" : self._policy.state_dict(),
-            "value_state" : self._value.state_dict(),
-            "policy_optimizer_state" : self._policy_optimizer.state_dict(),
-            "value_optimizer_state" : self._value_optimizer.state_dict(),
-            "history" : self._history
+            "policy_state": self._policy.state_dict(),
+            "value_state": self._value.state_dict(),
+            "policy_optimizer_state": self._policy_optimizer.state_dict(),
+            "value_optimizer_state": self._value_optimizer.state_dict(),
+            "history": self._history
         }
+
+    @property
+    def value(self):
+        return self._value
+
+    @property
+    def policy(self):
+        return self._policy
+
+    @property
+    def gamma(self):
+        return self._gamma
+
+    @property
+    def lam(self):
+        return self._lam
+
+    @property
+    def policy_clip(self):
+        return self._policy_clip
