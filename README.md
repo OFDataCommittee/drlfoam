@@ -69,7 +69,10 @@ Similarly, for cleaning up the build:
 
 ## Running a training
 
-Currently, there is only one example for assembling a DRL training with drlFoam using the *rotatingCylinder* test case. 
+Currently, there are two examples of assembling a DRL training with drlFoam:
+1. the *rotatingCylinder2D* test case
+2. the *rotatingPinball2D* test case
+
 To perform the training locally, execute the following steps:
 ```
 # from the top-level of this repository
@@ -77,7 +80,7 @@ source pydrl/bin/activate
 source setup-env
 cd examples
 # see config_orig.yml for all available options
-# dafualts to: training saved in test_training; buffer size 4; 2 runners
+# defaults to: training saved in test_training; buffer size 4; 2 runners
 # this training requires 4 MPI ranks on average and two loops
 # of each runner to fill the buffer
 python3 run_training.py
@@ -91,7 +94,7 @@ python3 run_training.py
 
 ## Running a training with SLURM
 
-This sections describes how to run a training on a HPC with SLURM. The workflow was tested on TU Braunschweig's [Pheonix cluster](https://www.tu-braunschweig.de/en/it/dienste/21/phoenix) and might need small adjustments for other HPC configurations. The cluster should provide the following modules/packages:
+This section describes how to run a training on a HPC with SLURM. The workflow was tested on TU Braunschweig's [Pheonix cluster](https://www.tu-braunschweig.de/en/it/dienste/21/phoenix) and might need small adjustments for other HPC configurations. The cluster should provide the following modules/packages:
 - Apptainer
 - Python 3.8
 - OpenMPI v4.1 (minor difference might be OK)
@@ -114,7 +117,7 @@ pip install -r requirements.txt
 module load singularity/latest
 ./Allwmake --container
 ```
-The *examples/run_training.py* scripts support SLURM-based execution via the `-e slurm` option. To run a new training on the cluster, navigate to the *examples* folder and create a new dedicated jobscript, e.g., *training_jobscript*. A suitable jobscript looks as follows:
+The *examples/run_training.py* scripts support SLURM-based. To run a new training on the cluster, navigate to the *examples* folder and create a new dedicated jobscript, e.g., *training_jobscript*. A suitable jobscript looks as follows:
 ```
 #SBATCH --partition=standard
 #SBATCH --nodes=1
