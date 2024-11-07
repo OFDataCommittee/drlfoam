@@ -13,34 +13,14 @@ from ..constants import EPS_SP, DEFAULT_TENSOR_TYPE
 logger = logging.getLogger(__name__)
 pt.set_default_tensor_type(DEFAULT_TENSOR_TYPE)
 
-DEFAULT_FC_DICT = {
-    "n_layers": 2,
-    "n_neurons": 64,
-    "activation": pt.nn.functional.relu
-}
 
 PPO_STATE_KEYS = ("policy_state", "value_state", "policy_optimizer_state",
                   "value_optimizer_state", "history")
 
 
 class PPOAgent(Agent):
-    def __init__(self, n_states, n_actions, action_min, action_max,
-                 policy_dict=None,
-                 policy_epochs: int = 100,
-                 policy_lr: float = 0.001,
-                 policy_clip: float = 0.1,
-                 policy_grad_norm: float = float("inf"),
-                 policy_kl_stop: float = 0.2,
-                 value_dict=None,
-                 value_epochs: int = 100,
-                 value_lr: float = 0.0005,
-                 value_clip: float = 0.1,
-                 value_grad_norm: float = float("inf"),
-                 value_mse_stop: float = 25.0,
-                 gamma: float = 0.99,
-                 lam: float = 0.97,
-                 entropy_weight: float = 0.01
-                 ):
+    def __init__(self, n_states, n_actions, action_min, action_max, ppo_dict: dict, value_train: dict,
+                 policy_train: dict, policy_model: dict, value_model: dict):
         """
         implements PPO-agent class
 
@@ -48,50 +28,29 @@ class PPOAgent(Agent):
         :param n_actions: number of actions
         :param action_min: lower action bound
         :param action_max: upper action bound
-        :param policy_dict: dict specifying the policy network architecture, if 'None' the default dict is used
-        :param policy_epochs: number of epochs to run for the policy network
-        :param policy_lr: learning rate for the policy network
-        :param policy_clip: value for clipping the update of the policy network
-        :param policy_grad_norm: clipping value for the gradient of the policy network
-        :param policy_kl_stop: value for KL-divergence criteria for stopping the training (policy network)
-        :param value_dict: dict specifying the value network architecture, if 'None' the default dict is used
-        :param value_epochs: number of epochs to run for the value network
-        :param value_lr: learning rate for the value network
-        :param value_clip: value for clipping the update of the value network
-        :param value_grad_norm: clipping value for the gradient of the value network
-        :param value_mse_stop: value for MSE-divergence criteria for stopping the training (value network)
-        :param gamma: discount factor
-        :param lam: hyperparameter lambda for computing the GAE
-        :param entropy_weight: value for weighing the entropy
+        :param ppo_dict: contains hyperparameter {"lambda", "gamma", "entropy_weight"} for PPO
+        :param value_train: contains parameters {"lr", "epochs", "clip", "grad_norm", "mse_stop"} for training the value
+                            network
+        :param policy_train: contains parameters {"lr", "epochs", "clip", "grad_norm", "kl_stop"} for training the
+                             policy network
+        :param policy_model: contains parameters {"n_layers", "n_neurons", "activation"} for the policy network
+        :param value_model: contains parameters {"n_layers", "n_neurons", "activation"} for the value network
         """
-        if value_dict is None:
-            value_dict = DEFAULT_FC_DICT
-        if policy_dict is None:
-            policy_dict = DEFAULT_FC_DICT
-
         self._n_states = n_states
         self._n_actions = n_actions
         self._action_min = action_min
         self._action_max = action_max
-        self._policy_epochs = policy_epochs
-        self._policy_lr = policy_lr
-        self._policy_clip = policy_clip
-        self._policy_grad_norm = policy_grad_norm
-        self._policy_kl_stop = policy_kl_stop
-        self._value_epochs = value_epochs
-        self._value_lr = value_lr
-        self._value_clip = value_clip
-        self._value_grad_norm = value_grad_norm
-        self._value_mse_stop = value_mse_stop
-        self._gamma = gamma
-        self._lam = lam
-        self._entropy_weight = entropy_weight
+        self._settings_value = value_train
+        self._settings_policy = policy_train
+        self._gamma = ppo_dict.get("gamma")
+        self._lam = ppo_dict.get("lambda")
+        self._entropy_weight = ppo_dict.get("entropy_weight")
 
         # networks and optimizers
-        self._policy = FCPolicy(self._n_states, self._n_actions, self._action_min, self._action_max, **policy_dict)
-        self._policy_optimizer = pt.optim.Adam(self._policy.parameters(), lr=self._policy_lr)
-        self._value = FCValue(self._n_states, **value_dict)
-        self._value_optimizer = pt.optim.Adam(self._value.parameters(), lr=self._value_lr)
+        self._policy = FCPolicy(self._n_states, self._n_actions, self._action_min, self._action_max, **policy_model)
+        self._value = FCValue(self._n_states, **value_model)
+        self._policy_optimizer = pt.optim.Adam(self._policy.parameters(), lr=self._settings_policy.get("lr"))
+        self._value_optimizer = pt.optim.Adam(self._value.parameters(), lr=self._settings_value.get("lr"))
 
         # history
         self._history = defaultdict(list)
@@ -121,18 +80,18 @@ class PPOAgent(Agent):
         # policy update
         p_loss_, e_loss_, kl_ = [], [], []
         logger.info("Updating policy network.")
-        for e in range(self._policy_epochs):
-
+        for e in range(self._settings_policy.get("epochs")):
             # compute loss and update weights
             log_p_new, entropy = self._policy.predict(states_wf, actions_wf)
             p_ratio = (log_p_new - log_p_old).exp()
             policy_objective = gaes * p_ratio
-            policy_objective_clipped = gaes * p_ratio.clamp(1.0 - self._policy_clip, 1.0 + self._policy_clip)
+            policy_objective_clipped = gaes * p_ratio.clamp(1.0 - self._settings_policy.get("clip"),
+                                                            1.0 + self._settings_policy.get("clip"))
             policy_loss = -pt.min(policy_objective, policy_objective_clipped).mean()
             entropy_loss = -entropy.mean() * self._entropy_weight
             self._policy_optimizer.zero_grad()
             (policy_loss + entropy_loss).backward()
-            pt.nn.utils.clip_grad_norm_(self._policy.parameters(), self._policy_grad_norm)
+            pt.nn.utils.clip_grad_norm_(self._policy.parameters(), self._settings_policy.get("grad_norm"))
             self._policy_optimizer.step()
             p_loss_.append(policy_loss.item())
             e_loss_.append(entropy_loss.item())
@@ -142,23 +101,24 @@ class PPOAgent(Agent):
                 log_p, _ = self._policy.predict(states_wf, actions_wf)
                 kl = (log_p_old - log_p).mean()
                 kl_.append(kl.item())
-                if kl.item() > self._policy_kl_stop:
+                if kl.item() > self._settings_policy.get("kl_stop"):
                     logger.info(f"Stopping policy training after {e} epochs due to KL-criterion.")
                     break
 
         # value update
         v_loss_, mse_ = [], []
         logger.info("Updating value network.")
-        for e in range(self._value_epochs):
+        for e in range(self._settings_value.get("epochs")):
             # compute loss and update weights
             values_new = self._value(pt.cat(states))
-            values_new_clipped = values + (values_new - values).clamp(-self._value_clip, self._value_clip)
+            values_new_clipped = values + (values_new - values).clamp(-self._settings_value.get("clip"),
+                                                                      self._settings_value.get("clip"))
             v_loss = (returns - values_new).pow(2)
             v_loss_clipped = (returns - values_new_clipped).pow(2)
             value_loss = pt.max(v_loss, v_loss_clipped).mul(0.5).mean()
             self._value_optimizer.zero_grad()
             value_loss.backward()
-            pt.nn.utils.clip_grad_norm_(self._value.parameters(), self._value_grad_norm)
+            pt.nn.utils.clip_grad_norm_(self._value.parameters(), self._settings_value.get("grad_norm"))
             self._value_optimizer.step()
             v_loss_.append(value_loss.item())
 
@@ -167,7 +127,7 @@ class PPOAgent(Agent):
                 values_check = self._value(pt.cat(states))
                 mse = (values - values_check).pow(2).mul(0.5).mean()
                 mse_.append(mse.item())
-                if mse.item() > self._value_mse_stop:
+                if mse.item() > self._settings_value.get("mse_stop"):
                     logger.info(f"Stopping value training after {e} epochs due to MSE-criterion.")
                     break
 
@@ -238,4 +198,4 @@ class PPOAgent(Agent):
 
     @property
     def policy_clip(self):
-        return self._policy_clip
+        return self._settings_policy.get("clip")

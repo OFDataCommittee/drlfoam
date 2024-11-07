@@ -91,8 +91,8 @@ class FCPolicy(pt.nn.Module):
         self._layers.append(pt.nn.Linear(self._n_states, self._n_neurons))
         if self._n_layers > 1:
             for hidden in range(self._n_layers - 1):
-                self._layers.append(pt.nn.Linear(
-                    self._n_neurons, self._n_neurons))
+                self._layers.append(pt.nn.Linear(self._n_neurons, self._n_neurons))
+                self._layers.append(pt.nn.LayerNorm(self._n_neurons))
         self._last_layer = pt.nn.Linear(self._n_neurons, 2*self._n_actions)
 
     @pt.jit.ignore
@@ -168,6 +168,7 @@ class FCValue(pt.nn.Module):
         if self._n_layers > 1:
             for hidden in range(self._n_layers - 1):
                 self._layers.append(pt.nn.Linear(self._n_neurons, self._n_neurons))
+                self._layers.append(pt.nn.LayerNorm(self._n_neurons))
         self._layers.append(pt.nn.Linear(self._n_neurons, 1))
 
     def forward(self, x: pt.Tensor) -> pt.Tensor:

@@ -106,27 +106,3 @@ def check_pos_float(value: float, name: str, with_zero=False) -> None:
         raise ValueError(message)
     if not with_zero and value <= 0.0:
         raise ValueError(message)
-
-
-def check_finish_time(base_path: str, t_end: Union[int, float], simulation: str) -> None:
-    """
-    checks if the user-specified finish time is greater than the end time of the base case, if not then exit with
-    an error message
-
-    :param base_path: BASE_PATH defined in run_training
-    :param t_end: user-specified finish time
-    :param simulation: test case
-    :return: None
-    """
-    pwd = join(base_path, "openfoam", "test_cases", simulation, "system", "controlDict")
-    with open(pwd, "r") as f:
-        lines = f.readlines()
-
-    # get the end time of the base case, normally endTime is specified in l. 28, but in case of modifications, check
-    # lines 20-35
-    t_base = [float(i.strip(";\n").split(" ")[-1]) for i in lines[20:35] if i.startswith("endTime")][0]
-
-    if t_base >= t_end:
-        logger.critical(f"specified finish time is smaller than end time of base case! The finish time needs to be "
-                        f"greater than {t_base}. Exiting...")
-        exit(0)

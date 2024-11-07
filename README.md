@@ -69,28 +69,30 @@ Similarly, for cleaning up the build:
 
 ## Running a training
 
-Currently, there is only one example for assembling a DRL training with drlFoam using the *rotatingCylinder* test case. To perform the training locally, execute the following steps:
+Currently, there is only one example for assembling a DRL training with drlFoam using the *rotatingCylinder* test case. 
+To perform the training locally, execute the following steps:
 ```
 # from the top-level of this repository
 source pydrl/bin/activate
 source setup-env
 cd examples
-# see run_trajectory.py for all available options
-# training saved in test_training; buffer size 4; 2 runners
+# see config_orig.yml for all available options
+# dafualts to: training saved in test_training; buffer size 4; 2 runners
 # this training requires 4 MPI ranks on average and two loops
 # of each runner to fill the buffer
-python3 run_training.py -o test_training -b 4 -r 2
+python3 run_training.py
 ```
-To run the training with the Singularity container, pass the `--container` flag to *setup-env*:
+The settings can be adjusted in the `config_orig.yml`, located in the `examples` directory.
+To run the training with the Apptainer container, pass the `--container` flag to *setup-env*:
 ```
 source setup-env --container
-python3 run_training.py -o test_training -b 4 -r 2
+python3 run_training.py
 ```
 
 ## Running a training with SLURM
 
 This sections describes how to run a training on a HPC with SLURM. The workflow was tested on TU Braunschweig's [Pheonix cluster](https://www.tu-braunschweig.de/en/it/dienste/21/phoenix) and might need small adjustments for other HPC configurations. The cluster should provide the following modules/packages:
-- Singularity
+- Apptainer
 - Python 3.8
 - OpenMPI v4.1 (minor difference might be OK)
 - SLURM
@@ -128,7 +130,7 @@ source ~/drlfoam/setup-env --container
 
 # start a training with a buffer size of 8 and 8 runners;
 # save output to log.test_training
-python3 run_training.py -o test_training -e slurm -b 8 -r 8 &> log.test_training
+python3 run_training.py &> log.test_training
 ```
 Submitting, inspecting, and canceling of trainings works as follows:
 ```
