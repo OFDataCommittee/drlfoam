@@ -67,19 +67,33 @@ class PPOAgent(Agent):
         :return: None
         """
         values = [self._value(s).detach() for s in states]
+
         # compute log_p for all but the final experience tuple
         log_p_old = pt.cat([self._policy.predict(s[:-1], a[:-1])[0].detach() for s, a in zip(states, actions)])
-        returns = pt.cat([compute_returns(r, self._gamma) for r in rewards])
         gaes = pt.cat([compute_gae(r, v, self._gamma, self._lam) for r, v in zip(rewards, values)])
         gaes = (gaes - gaes.mean()) / (gaes.std(0) + EPS_SP)
-        values = pt.cat(values)
         # create tensors with all but the final state/action of each trajectory for convenience
         states_wf = pt.cat([s[:-1] for s in states])
         actions_wf = pt.cat([a[:-1] for a in actions])
 
         # policy update
-        p_loss_, e_loss_, kl_ = [], [], []
+        p_loss_, e_loss_, kl_ = self._train_policy(states_wf, actions_wf, log_p_old, gaes)
+
+        # value update & new computation of values
+        v_loss_, mse_ = self._train_value(states, pt.cat(values), rewards)
+
+        # save history
+        self._history["policy_loss"].append(p_loss_)
+        self._history["entropy_loss"].append(e_loss_)
+        self._history["policy_div"].append(kl_)
+        self._history["value_loss"].append(v_loss_)
+        self._history["value_mse"].append(mse_)
+        self._history["episode"].append(self._update_counter)
+        self._update_counter += 1
+
+    def _train_policy(self, states_wf, actions_wf, log_p_old, gaes):
         logger.info("Updating policy network.")
+        p_loss, e_loss, kl = [], [], []
         for e in range(self._settings_policy.get("epochs")):
             # compute loss and update weights
             log_p_new, entropy = self._policy.predict(states_wf, actions_wf)
@@ -93,21 +107,26 @@ class PPOAgent(Agent):
             (policy_loss + entropy_loss).backward()
             pt.nn.utils.clip_grad_norm_(self._policy.parameters(), self._settings_policy.get("grad_norm"))
             self._policy_optimizer.step()
-            p_loss_.append(policy_loss.item())
-            e_loss_.append(entropy_loss.item())
+            p_loss.append(policy_loss.item())
+            e_loss.append(entropy_loss.item())
 
             # check KL-divergence
             with pt.no_grad():
                 log_p, _ = self._policy.predict(states_wf, actions_wf)
-                kl = (log_p_old - log_p).mean()
-                kl_.append(kl.item())
-                if kl.item() > self._settings_policy.get("kl_stop"):
+                kl_ = (log_p_old - log_p).mean()
+                kl.append(kl_.item())
+                if kl_.item() > self._settings_policy.get("kl_stop"):
                     logger.info(f"Stopping policy training after {e} epochs due to KL-criterion.")
                     break
+        return p_loss, e_loss, kl
 
-        # value update
-        v_loss_, mse_ = [], []
+    def _train_value(self, states, values, rewards):
         logger.info("Updating value network.")
+
+        # compute returns
+        returns = pt.cat([compute_returns(r, self._gamma) for r in rewards])
+
+        v_loss_, mse_ = [], []
         for e in range(self._settings_value.get("epochs")):
             # compute loss and update weights
             values_new = self._value(pt.cat(states))
@@ -130,15 +149,7 @@ class PPOAgent(Agent):
                 if mse.item() > self._settings_value.get("mse_stop"):
                     logger.info(f"Stopping value training after {e} epochs due to MSE-criterion.")
                     break
-
-        # save history
-        self._history["policy_loss"].append(p_loss_)
-        self._history["entropy_loss"].append(e_loss_)
-        self._history["policy_div"].append(kl_)
-        self._history["value_loss"].append(v_loss_)
-        self._history["value_mse"].append(mse_)
-        self._history["episode"].append(self._update_counter)
-        self._update_counter += 1
+        return v_loss_, mse_
 
     def save_state(self, path: str) -> None:
         pt.save(self.state, path)

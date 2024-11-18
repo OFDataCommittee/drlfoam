@@ -4,7 +4,7 @@
 training:
     executer: "local"                       # executer, either 'local' or 'slurm'
     simulation: "rotatingCylinder2D"        # simulation environment either 'rotatingCylinder2D' or 'rotatingPinball2D'
-    training_path: "Test_cylinder2"          # path to the directory in which the training should be executed
+    training_path: "test_training"          # path to the directory in which the training should be executed
     n_runner: 2                             # number of runners for parallel execution
     buffer_size: 4                          # buffer size
     end_time: 8                             # finish time of the simulation

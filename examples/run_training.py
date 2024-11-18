@@ -38,7 +38,8 @@ def main():
 
     # load the setup
     setup = ParseSetup(BASE_PATH)
-    setup.env.path = join(setup.training.get("training_path"), "base")
+    training_path = str(join(BASE_PATH, setup.buffer["training_path"]))
+    setup.env.path = join(training_path, "base")
 
     # add the path to openfoam to the Allrun scripts
     # if DEBUG:
@@ -46,8 +47,7 @@ def main():
 
     # create buffer
     if setup.training["executer"] == "local":
-        buffer = LocalBuffer(setup.buffer["training_path"], setup.env, setup.buffer["buffer_size"],
-                             setup.buffer["n_runner"])
+        buffer = LocalBuffer(training_path, setup.env, setup.buffer["buffer_size"], setup.buffer["n_runner"])
     elif setup.training["executer"] == "slurm":
         # Typical Slurm configs for TU Dresden cluster
         config = SlurmConfig(
@@ -55,7 +55,7 @@ def main():
             modules=["development/24.04 GCC/12.3.0", "OpenMPI/4.1.5", "OpenFOAM/v2312"],
             commands_pre=["source $FOAM_BASH", f"source {BASE_PATH}/setup-env"]
         )
-        buffer = SlurmBuffer(setup.buffer["training_path"], setup.env, setup.buffer["buffer_size"],
+        buffer = SlurmBuffer(training_path, setup.env, setup.buffer["buffer_size"],
                              setup.buffer["n_runner"], config, timeout=setup.buffer["timeout"])
     else:
         raise ValueError(
@@ -68,7 +68,7 @@ def main():
     # load checkpoint if provided
     if setup.training["checkpoint"] is not None:
         logging.info(f"Loading checkpoint from file {setup.training['checkpoint']}")
-        agent.load_state(join(str(setup.training["training_path"]), setup.training["checkpoint"]))
+        agent.load_state(join(training_path, setup.training["checkpoint"]))
         starting_episode = agent.history["episode"][-1] + 1
         buffer._n_fills = starting_episode
     else:
@@ -92,10 +92,10 @@ def main():
         states, actions, rewards = buffer.observations
         print_statistics(actions, rewards)
         agent.update(states, actions, rewards)
-        agent.save_state(join(setup.training["training_path"], f"checkpoint_{e}.pt"))
+        agent.save_state(join(training_path, f"checkpoint_{e}.pt"))
         current_policy = agent.trace_policy()
         buffer.update_policy(current_policy)
-        current_policy.save(join(setup.training["training_path"], f"policy_trace_{e}.pt"))
+        current_policy.save(join(training_path, f"policy_trace_{e}.pt"))
         if not e == setup.training["episodes"] - 1:
             buffer.reset()
     logger.info(f"Training time (s): {time() - start_time}")
